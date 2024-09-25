@@ -9,7 +9,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 public class TelegramBot extends TelegramLongPollingBot {
     @Override
     public String getBotToken(){
-        return "7583195052:AAGb3xKEsNuMNgqYdyxNf5pQ2fnyklX6Zrc";
+        return System.getenv("TELEGRAM_BOT_TOKEN");
     }
 
     @Override
