@@ -1,19 +1,29 @@
 package org.example.bot.commands;
 
+import org.example.bot.TelegramBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class HelpCommand implements Command {
-    @Override
-    public SendMessage execute(Update update) {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(update.getMessage().getChatId().toString());
-        sendMessage.setText("Я могу помочь вам с рецептами. Вот список доступных команд:\n" +
-                "/start - Начать\n" +
-                "/help - Помощь\n" +
-                "/authors - Узнать авторов\n" +
-                "/info - узнать информацию о боте" );
 
-        return sendMessage;
+    @Override
+    public String getDescription() {
+        return "Список команд";
+    }
+
+    @Override
+    public String getContent() {
+        StringBuilder helpMessage = new StringBuilder("Доступные команды:\n");
+        for (Map.Entry<String, Command> entry : TelegramBot.getCommandMap().entrySet()) {
+            helpMessage.append(entry.getKey()).append(" - ").append(entry.getValue().getDescription()).append("\n");
+        }
+        return helpMessage.toString();
+    }
+
+    @Override
+    public String getCommand() {
+        return "/help";
     }
 }

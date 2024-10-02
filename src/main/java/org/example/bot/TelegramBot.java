@@ -6,13 +6,13 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class TelegramBot extends TelegramLongPollingBot {
 
     // Хеш-таблица для хранения команд
-    private final Map<String, Command> commands = new HashMap<>();
+    private static final LinkedHashMap<String, Command> commands = new LinkedHashMap<>();
 
     public TelegramBot() {
         // Регистрация команд
@@ -20,6 +20,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         commands.put("/help", new HelpCommand());
         commands.put("/info", new InfoCommand());
         commands.put("/authors", new AuthorsCommand());
+    }
+    public static LinkedHashMap<String, Command> getCommandMap() {
+        return commands;
     }
 
     @Override
@@ -37,15 +40,15 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String text = update.getMessage().getText();
 
-            SendMessage sendMessage;
+            SendMessage sendMessage = new SendMessage();
+            sendMessage.setChatId(update.getMessage().getChatId().toString());
+
 
             // Проверка наличия команды в хеш-таблице
             Command command = commands.get(text);
             if (command != null) {
-                sendMessage = command.execute(update);
+                sendMessage.setText(command.getContent());
             } else {
-                sendMessage = new SendMessage();
-                sendMessage.setChatId(update.getMessage().getChatId().toString());
                 sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
             }
 
