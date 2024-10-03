@@ -4,6 +4,7 @@ import org.example.bot.commands.*;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.LinkedHashMap;
@@ -21,6 +22,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         commands.put("/info", new InfoCommand());
         commands.put("/authors", new AuthorsCommand());
     }
+
     public static LinkedHashMap<String, Command> getCommandMap() {
         return commands;
     }
@@ -43,11 +45,14 @@ public class TelegramBot extends TelegramLongPollingBot {
             SendMessage sendMessage = new SendMessage();
             sendMessage.setChatId(update.getMessage().getChatId().toString());
 
-
             // Проверка наличия команды в хеш-таблице
             Command command = commands.get(text);
             if (command != null) {
                 sendMessage.setText(command.getContent());
+                if (command instanceof HelpCommand) {
+                    sendMessage.setReplyMarkup(((HelpCommand) command).getReplyKeyboard());
+                    sendMessage.setReplyMarkup(((HelpCommand) command).getInlineKeyboard());
+                }
             } else {
                 sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
             }
@@ -57,6 +62,31 @@ public class TelegramBot extends TelegramLongPollingBot {
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
+        } else if (update.hasCallbackQuery()) {
+            handleCallbackQuery(update.getCallbackQuery());
+        }
+    }
+
+    private void handleCallbackQuery(CallbackQuery callbackQuery) {
+        String data = callbackQuery.getData();
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(callbackQuery.getMessage().getChatId().toString());
+
+        Command command = commands.get(data);
+        if (command != null) {
+            sendMessage.setText(command.getContent());
+            if (command instanceof HelpCommand) {
+                sendMessage.setReplyMarkup(((HelpCommand) command).getReplyKeyboard());
+                sendMessage.setReplyMarkup(((HelpCommand) command).getInlineKeyboard());
+            }
+        } else {
+            sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
+        }
+
+        try {
+            this.execute(sendMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
     }
 }

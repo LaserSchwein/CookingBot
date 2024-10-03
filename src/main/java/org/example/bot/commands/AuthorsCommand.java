@@ -1,15 +1,16 @@
 package org.example.bot.commands;
 
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
+
 public class AuthorsCommand implements Command {
-    public String getDescription (){
+    @Override
+    public String getDescription() {
         return "Авторы";
     }
 
     @Override
     public String getContent() {
-        return "@ZAntoshkAZ @polska_stronker @sobol_eg";
+        return "Авторы: @sobol_eg, @ZAntoshkAZ, @polska_stronker";
     }
 
     @Override
@@ -17,4 +18,8 @@ public class AuthorsCommand implements Command {
         return "/authors";
     }
 
+    @Override
+    public KeyboardButton getButton() {
+        return new KeyboardButton(getCommand());
+    }
 }

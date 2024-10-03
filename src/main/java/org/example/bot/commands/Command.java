@@ -1,10 +1,14 @@
 package org.example.bot.commands;
 
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 
 public interface Command {
     String getDescription();
     String getContent();
     String getCommand();
+    KeyboardButton getButton();
+    default ReplyKeyboardMarkup getReplyKeyboard() {
+        return null; // По умолчанию не возвращаем клавиатуру
+    }
 }
