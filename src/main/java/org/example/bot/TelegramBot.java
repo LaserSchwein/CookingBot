@@ -8,11 +8,9 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class TelegramBot extends TelegramLongPollingBot {
 
-    // Хеш-таблица для хранения команд
     private static final LinkedHashMap<String, Command> commands = new LinkedHashMap<>();
 
     public TelegramBot() {
@@ -49,9 +47,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             Command command = commands.get(text);
             if (command != null) {
                 sendMessage.setText(command.getContent());
+
+                // Добавляем только reply keyboard для команды /help
                 if (command instanceof HelpCommand) {
                     sendMessage.setReplyMarkup(((HelpCommand) command).getReplyKeyboard());
-                    sendMessage.setReplyMarkup(((HelpCommand) command).getInlineKeyboard());
                 }
             } else {
                 sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
@@ -62,6 +61,27 @@ public class TelegramBot extends TelegramLongPollingBot {
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
+
+            // Если команда /help, отправляем inline keyboard отдельным сообщением
+            if ("/help".equals(text)) {
+                HelpCommand helpCommand = (HelpCommand) command;
+                SendMessage inlineMessage = new SendMessage();
+                inlineMessage.setChatId(update.getMessage().getChatId().toString());
+                inlineMessage.setText("Выберите команду:");
+
+                // Логирование времени выполнения метода getInlineKeyboard
+                long startTimeKeyboard = System.currentTimeMillis();
+                inlineMessage.setReplyMarkup(helpCommand.getInlineKeyboard());
+                long endTimeKeyboard = System.currentTimeMillis();
+                System.out.println("Time taken to get inline keyboard: " + (endTimeKeyboard - startTimeKeyboard) + " ms");
+
+                try {
+                    this.execute(inlineMessage);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+            }
+
         } else if (update.hasCallbackQuery()) {
             handleCallbackQuery(update.getCallbackQuery());
         }
@@ -75,14 +95,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         Command command = commands.get(data);
         if (command != null) {
             sendMessage.setText(command.getContent());
-            if (command instanceof HelpCommand) {
-                sendMessage.setReplyMarkup(((HelpCommand) command).getReplyKeyboard());
-                sendMessage.setReplyMarkup(((HelpCommand) command).getInlineKeyboard());
-            }
         } else {
             sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
         }
-
         try {
             this.execute(sendMessage);
         } catch (TelegramApiException e) {

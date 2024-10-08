@@ -1,9 +1,5 @@
 package org.example.bot.commands;
 
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
-
 public class StartCommand implements Command {
 
     @Override
@@ -21,8 +17,4 @@ public class StartCommand implements Command {
         return "/start";
     }
 
-    @Override
-    public KeyboardButton getButton() {
-        return new KeyboardButton(getCommand());
-    }
 }
