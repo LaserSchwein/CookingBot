@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Map;
 
 public class HelpCommand implements Command {
+
+    private InlineKeyboardMarkup cachedInlineKeyboard; // Кэш для inline клавиатуры
+
     @Override
     public String getDescription() {
         return "Список команд";
@@ -33,12 +36,10 @@ public class HelpCommand implements Command {
         return "/help";
     }
 
-    @Override
     public KeyboardButton getButton() {
         return new KeyboardButton(getCommand());
     }
 
-    @Override
     public ReplyKeyboardMarkup getReplyKeyboard() {
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         replyKeyboardMarkup.setResizeKeyboard(true);
@@ -54,13 +55,20 @@ public class HelpCommand implements Command {
     }
 
     public InlineKeyboardMarkup getInlineKeyboard() {
+        if (cachedInlineKeyboard == null) {
+            cachedInlineKeyboard = createInlineKeyboard(); // Создаем клавиатуру только один раз
+        }
+        return cachedInlineKeyboard;
+    }
+
+    private InlineKeyboardMarkup createInlineKeyboard() {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
 
         for (Map.Entry<String, Command> entry : TelegramBot.getCommandMap().entrySet()) {
             if (!entry.getKey().equals("/help")) {
                 InlineKeyboardButton button = new InlineKeyboardButton();
-                button.setText(entry.getValue().getCommand() + " - " + entry.getValue().getDescription());
+                button.setText(entry.getValue().getCommand());
                 button.setCallbackData(entry.getKey());
                 keyboard.add(List.of(button));
             }

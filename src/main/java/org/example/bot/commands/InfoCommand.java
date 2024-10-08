@@ -1,7 +1,5 @@
 package org.example.bot.commands;
 
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
-
 public class InfoCommand implements Command {
     @Override
     public String getDescription() {
@@ -18,8 +16,4 @@ public class InfoCommand implements Command {
         return "/info";
     }
 
-    @Override
-    public KeyboardButton getButton() {
-        return new KeyboardButton(getCommand());
-    }
 }
