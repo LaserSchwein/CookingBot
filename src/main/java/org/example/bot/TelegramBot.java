@@ -21,6 +21,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         commands.put("/help", new HelpCommand());
         commands.put("/info", new InfoCommand());
         commands.put("/authors", new AuthorsCommand());
+        commands.put("/register", new RegisterCommand());
     }
 
     public static LinkedHashMap<String, Command> getCommandMap() {
