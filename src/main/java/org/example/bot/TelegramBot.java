@@ -51,19 +51,16 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (command != null) {
                 sendMessage.setText(command.getContent());
 
-                // Если команда /help, добавляем inline-клавиатуру
                 if (command instanceof HelpCommand) {
                     sendMessage.setReplyMarkup(((HelpCommand) command).createInlineCommandsKeyboard());
                 }
 
-                // Если команда /start, добавляем reply keyboard с командой /help
                 if (command.getCommand().equals("/start")) {
                     sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
                 }
 
             } else {
                 sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
-                // Добавляем reply keyboard с командой /help в случае неизвестной команды
                 sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
             }
 
@@ -81,7 +78,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void handleCallbackQuery(CallbackQuery callbackQuery) {
         String data = callbackQuery.getData();
 
-        // Если нажали "Назад", возвращаемся к команде /help
         if ("/help".equals(data)) {
             Command helpCommand = commands.get("/help");
 
@@ -105,12 +101,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                 editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
                 editMessageText.setText(command.getContent());
 
-                // Обновляем разметку клавиатуры
                 EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
                 editMarkup.setChatId(callbackQuery.getMessage().getChatId().toString());
                 editMarkup.setMessageId(callbackQuery.getMessage().getMessageId());
 
-                // Если это HelpCommand, создаем клавиатуру с командами
                 if (command instanceof HelpCommand) {
                     editMarkup.setReplyMarkup(((HelpCommand) command).createInlineCommandsKeyboard());
                 } else {
@@ -124,7 +118,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                     e.printStackTrace();
                 }
             } else {
-                // Если команда не найдена, выводим сообщение об ошибке
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(callbackQuery.getMessage().getChatId().toString());
                 sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
