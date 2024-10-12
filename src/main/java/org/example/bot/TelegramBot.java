@@ -113,7 +113,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                 try {
                     this.execute(editMessageText);   // Сначала обновляем текст сообщения
-                    this.execute(editMarkup);        // Затем обновляем клавиатуру
+                    this.execute(editMarkup);        // обновляем клавиатуру
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
