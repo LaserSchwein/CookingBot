@@ -10,7 +10,7 @@ public interface Command {
     String getDescription();
     String getContent();
     String getCommand();
-    default InlineKeyboardMarkup getInlineKeyboard() {
+    default InlineKeyboardMarkup createHelpBackButtonKeyboard() {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
 
@@ -21,5 +21,5 @@ public interface Command {
 
         inlineKeyboardMarkup.setKeyboard(keyboard);
         return inlineKeyboardMarkup;
-    };
+    }
 }

@@ -20,8 +20,7 @@ public class StartCommand implements Command {
     }
 
     @Override
-    public InlineKeyboardMarkup getInlineKeyboard() {
-
-        return Command.super.getInlineKeyboard();
+    public InlineKeyboardMarkup createHelpBackButtonKeyboard() {
+        return Command.super.createHelpBackButtonKeyboard();
     }
 }
