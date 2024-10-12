@@ -54,9 +54,10 @@ public class HelpCommand implements Command {
         return replyKeyboardMarkup;
     }
 
+    // Переименованный метод, создающий клавиатуру с командами
     public InlineKeyboardMarkup createInlineCommandsKeyboard() {
         if (cachedInlineKeyboard == null) {
-            cachedInlineKeyboard = createInlineKeyboard();
+            cachedInlineKeyboard = createInlineKeyboard(); // Создаем клавиатуру только один раз
         }
         return cachedInlineKeyboard;
     }
