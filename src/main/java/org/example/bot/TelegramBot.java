@@ -42,6 +42,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String text = update.getMessage().getText();
+            long userId = update.getMessage().getFrom().getId();
+            String userName = update.getMessage().getFrom().getUserName();
 
             SendMessage sendMessage = new SendMessage();
             sendMessage.setChatId(update.getMessage().getChatId().toString());
@@ -57,6 +59,12 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                 if (command.getCommand().equals("/start")) {
                     sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
+                }
+                if (command.getCommand().equals("/register")) {
+                    System.out.println("dfsfdsfsdfssdfa");
+                    User user = new User(userId, userName);
+                    final RegisterCommand registerCommand = new RegisterCommand();
+                    registerCommand.registerUser(user);
                 }
 
             } else {
