@@ -9,13 +9,18 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.LinkedHashMap;
+import java.util.Properties;
 
 public class TelegramBot extends TelegramLongPollingBot {
 
     private static final LinkedHashMap<String, Command> commands = new LinkedHashMap<>();
+    private String botToken; // Поле для хранения токена
 
     public TelegramBot() {
+        loadConfig();  // Загружаем конфигурацию, включая токен
         // Регистрация команд
         commands.put("/start", new StartCommand());
         commands.put("/help", new HelpCommand());
@@ -30,7 +35,22 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return System.getenv("TELEGRAM_BOT_TOKEN");
+        return botToken;  // Возвращаем токен, считанный из файла
+    }
+
+    private void loadConfig() {
+
+        Properties properties = new Properties();
+        try (InputStream input = getClass().getClassLoader().getResourceAsStream("bottoken.properties")) {
+            if (input == null) {
+                System.out.println("Sorry, unable to find bottoken.properties");
+                return;
+            }
+            properties.load(input);
+            this.botToken = properties.getProperty("bot.token");  // Сохраняем токен в поле botToken
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -42,8 +62,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String text = update.getMessage().getText();
-            long userId = update.getMessage().getFrom().getId();
-            String userName = update.getMessage().getFrom().getUserName();
 
             SendMessage sendMessage = new SendMessage();
             sendMessage.setChatId(update.getMessage().getChatId().toString());
@@ -51,7 +69,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             // Проверка наличия команды в хеш-таблице
             Command command = commands.get(text);
             if (command != null) {
-                sendMessage.setText(command.getContent());
+                sendMessage.setText(command.getContent(update));
 
                 if (command instanceof HelpCommand) {
                     sendMessage.setReplyMarkup(((HelpCommand) command).createInlineCommandsKeyboard());
@@ -60,12 +78,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 if (command.getCommand().equals("/start")) {
                     sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
                 }
-                if (command.getCommand().equals("/register")) {
-                    System.out.println("dfsfdsfsdfssdfa");
-                    User user = new User(userId, userName);
-                    final RegisterCommand registerCommand = new RegisterCommand();
-                    registerCommand.registerUser(user);
-                }
+
 
             } else {
                 sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
@@ -79,20 +92,19 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
 
         } else if (update.hasCallbackQuery()) {
-            handleCallbackQuery(update.getCallbackQuery());
+            handleCallbackQuery(update.getCallbackQuery(), update);
         }
     }
 
-    private void handleCallbackQuery(CallbackQuery callbackQuery) {
+    private void handleCallbackQuery(CallbackQuery callbackQuery, Update update) {
         String data = callbackQuery.getData();
-
         if ("/help".equals(data)) {
             Command helpCommand = commands.get("/help");
 
             EditMessageText editMessageText = new EditMessageText();
             editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
             editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
-            editMessageText.setText(helpCommand.getContent());
+            editMessageText.setText(helpCommand.getContent(update));
             editMessageText.setReplyMarkup(((HelpCommand) helpCommand).createInlineCommandsKeyboard());
 
             try {
@@ -107,7 +119,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 EditMessageText editMessageText = new EditMessageText();
                 editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
                 editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
-                editMessageText.setText(command.getContent());
+                editMessageText.setText(command.getContent(update));
 
                 EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
                 editMarkup.setChatId(callbackQuery.getMessage().getChatId().toString());

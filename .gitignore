@@ -36,3 +36,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Properties ###
+src/main/resources/bottoken.properties
+src/main/resources/dbconfig.properties

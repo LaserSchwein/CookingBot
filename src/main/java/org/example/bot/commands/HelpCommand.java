@@ -1,6 +1,7 @@
 package org.example.bot.commands;
 
 import org.example.bot.TelegramBot;
+import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -21,7 +22,7 @@ public class HelpCommand implements Command {
     }
 
     @Override
-    public String getContent() {
+    public String getContent(Update update) {
         StringBuilder helpMessage = new StringBuilder("Доступные команды:\n");
         for (Map.Entry<String, Command> entry : TelegramBot.getCommandMap().entrySet()) {
             if (!entry.getKey().equals("/help")) {

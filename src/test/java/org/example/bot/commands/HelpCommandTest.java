@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
@@ -20,6 +21,7 @@ public class HelpCommandTest {
     private HelpCommand helpCommand;
     private LinkedHashMap<String, Command> commandMap;
     private MockedStatic<TelegramBot> mockedStatic;
+    private Update update;
 
     @BeforeEach
     public void setUp() {
@@ -60,7 +62,7 @@ public class HelpCommandTest {
                 "/authors - Авторы\n" +
                 "/register - Регистрация аккаунта в боте\n";
 
-        String actualContent = helpCommand.getContent();
+        String actualContent = helpCommand.getContent(update);
         assertEquals(expectedContent, actualContent, "Контент помощи должен соответствовать ожидаемому");
     }
 
