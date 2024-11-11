@@ -49,7 +49,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             // Проверка наличия команды в хеш-таблице
             Command command = commands.get(text);
             if (command != null) {
-                sendMessage.setText(command.getContent());
+                sendMessage.setText(command.getContent(update));
 
                 if (command instanceof HelpCommand) {
                     sendMessage.setReplyMarkup(((HelpCommand) command).createInlineCommandsKeyboard());
@@ -71,11 +71,11 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
 
         } else if (update.hasCallbackQuery()) {
-            handleCallbackQuery(update.getCallbackQuery());
+            handleCallbackQuery(update.getCallbackQuery(), update);
         }
     }
 
-    private void handleCallbackQuery(CallbackQuery callbackQuery) {
+    private void handleCallbackQuery(CallbackQuery callbackQuery, Update update) {
         String data = callbackQuery.getData();
 
         if ("/help".equals(data)) {
@@ -84,7 +84,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             EditMessageText editMessageText = new EditMessageText();
             editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
             editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
-            editMessageText.setText(helpCommand.getContent());
+            editMessageText.setText(helpCommand.getContent(update));
             editMessageText.setReplyMarkup(((HelpCommand) helpCommand).createInlineCommandsKeyboard());
 
             try {
@@ -99,7 +99,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 EditMessageText editMessageText = new EditMessageText();
                 editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
                 editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
-                editMessageText.setText(command.getContent());
+                editMessageText.setText(command.getContent(update));
 
                 EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
                 editMarkup.setChatId(callbackQuery.getMessage().getChatId().toString());

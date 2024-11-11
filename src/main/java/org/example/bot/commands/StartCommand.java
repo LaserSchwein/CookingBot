@@ -1,5 +1,6 @@
 package org.example.bot.commands;
 
+import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
 public class StartCommand implements Command {
@@ -10,7 +11,7 @@ public class StartCommand implements Command {
     }
 
     @Override
-    public String getContent() {
+    public String getContent(Update update) {
         return "Добро пожаловать в бот с рецептами! Используйте /help для получения списка команд.";
     }
 

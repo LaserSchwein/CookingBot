@@ -1,15 +1,39 @@
 package org.example.bot;
 
-import java.sql.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.Properties;
 
 public class DatabaseManager {
-    private String URL = "jdbc:postgresql://localhost:5432/userdata"; // замените на ваш URL базы данных
-    private String USER = "postgres"; // замените на ваше имя пользователя
-    private String PASSWORD = "postgres"; // замените на ваш пароль
+    private String URL;
+    private String USER;
+    private String PASSWORD;
 
     private Connection connection;
 
-    public void DatabaseHandler() {
+    public DatabaseManager() {
+        loadConfig();
+        connectToDatabase();
+    }
+
+    private void loadConfig() {
+        Properties properties = new Properties();
+        try (InputStream input = new FileInputStream("src/main/resources/dbconfig.properties")) {
+            properties.load(input);
+            URL = properties.getProperty("db.url");
+            USER = properties.getProperty("db.user");
+            PASSWORD = properties.getProperty("db.password");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void connectToDatabase() {
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
             System.out.println("База данных: " + URL + " успешно подключена.");
