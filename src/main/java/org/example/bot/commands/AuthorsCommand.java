@@ -1,5 +1,7 @@
 package org.example.bot.commands;
 
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
@@ -11,8 +13,12 @@ public class AuthorsCommand implements Command {
     }
 
     @Override
-    public String getContent(Update update) {
-        return "Авторы: @sobol_eg, @ZAntoshkAZ, @polska_stronker";
+    public SendMessage getContent(Update update) {
+        SendMessage message = new SendMessage();
+        message.setChatId(update.getMessage().getChatId().toString());
+        message.setText("Авторы: @sobol_eg, @ZAntoshkAZ, @polska_stronker");
+
+        return message;
     }
 
     @Override

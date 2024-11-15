@@ -1,5 +1,6 @@
 package org.example.bot.commands;
 
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
@@ -11,8 +12,12 @@ public class InfoCommand implements Command {
     }
 
     @Override
-    public String getContent(Update update) {
-        return "Это универсальный бот, который поможет вам выбрать блюдо, написать рецепт из имеющихся у вас ингредиентов и многое другое.";
+    public SendMessage getContent(Update update) {
+        SendMessage message = new SendMessage();
+        message.setChatId(update.getMessage().getChatId().toString());
+        message.setText("Это универсальный бот, который поможет вам выбрать блюдо, написать рецепт из имеющихся у вас ингредиентов и многое другое.");
+
+        return message;
     }
 
     @Override
