@@ -1,5 +1,7 @@
 package org.example.bot.commands;
 
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -9,7 +11,7 @@ import java.util.List;
 
 public interface Command {
     String getDescription();
-    String getContent(Update update);
+    SendMessage getContent(Update update);
     String getCommand();
     default InlineKeyboardMarkup createHelpBackButtonKeyboard() {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();

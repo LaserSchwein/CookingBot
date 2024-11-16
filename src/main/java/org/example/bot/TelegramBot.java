@@ -18,6 +18,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private static final LinkedHashMap<String, Command> commands = new LinkedHashMap<>();
     private String botToken; // Поле для хранения токена
+    private final DatabaseManager databaseManager = new DatabaseManager();
 
     public TelegramBot() {
         loadConfig();  // Загружаем конфигурацию, включая токен
@@ -41,9 +42,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void loadConfig() {
 
         Properties properties = new Properties();
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream("bottoken.properties")) {
+        try (InputStream input = getClass().getClassLoader().getResourceAsStream("botToken.properties")) {
             if (input == null) {
-                System.out.println("Sorry, unable to find bottoken.properties");
+                System.out.println("Sorry, unable to find botToken.properties");
                 return;
             }
             properties.load(input);
@@ -60,6 +61,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+
         if (update.hasMessage() && update.getMessage().hasText()) {
             String text = update.getMessage().getText();
 
@@ -69,7 +71,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             // Проверка наличия команды в хеш-таблице
             Command command = commands.get(text);
             if (command != null) {
-                sendMessage.setText(command.getContent(update));
+                sendMessage = command.getContent(update);
 
                 if (command instanceof HelpCommand) {
                     sendMessage.setReplyMarkup(((HelpCommand) command).createInlineCommandsKeyboard());
@@ -79,7 +81,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
                 }
 
-
+            } else if (databaseManager.getRegistrationStep(update.getMessage().getChatId()) == 5){
+                RegisterCommand registerCommand = (RegisterCommand) commands.get("/register");
+                sendMessage = registerCommand.getContent(update);
+                try {
+                    this.execute(sendMessage);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
             } else {
                 sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
                 sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
@@ -104,7 +113,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             EditMessageText editMessageText = new EditMessageText();
             editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
             editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
-            editMessageText.setText(helpCommand.getContent(update));
+            editMessageText.setText(helpCommand.getContent(update).getText());
             editMessageText.setReplyMarkup(((HelpCommand) helpCommand).createInlineCommandsKeyboard());
 
             try {
@@ -119,7 +128,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 EditMessageText editMessageText = new EditMessageText();
                 editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
                 editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
-                editMessageText.setText(command.getContent(update));
+                editMessageText.setText(command.getContent(update).getText());
 
                 EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
                 editMarkup.setChatId(callbackQuery.getMessage().getChatId().toString());
@@ -137,6 +146,15 @@ public class TelegramBot extends TelegramLongPollingBot {
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
+            } else if (data.startsWith("language_") || data.startsWith("vegan_") || data.startsWith("vegetarian_") || data.startsWith("allergies_")) {
+
+                RegisterCommand registerCommand = (RegisterCommand) commands.get("/register");
+                SendMessage sendMessage = registerCommand.getContent(update);
+                try {
+                    this.execute(sendMessage);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
             } else {
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(callbackQuery.getMessage().getChatId().toString());
@@ -150,5 +168,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
             }
         }
+
+
     }
 }
