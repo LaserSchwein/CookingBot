@@ -14,7 +14,11 @@ public class StartCommand implements Command {
     @Override
     public SendMessage getContent(Update update) {
         SendMessage message = new SendMessage();
-        message.setChatId(update.getMessage().getChatId().toString());
+        if (update.getMessage() == null) {
+            message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+        } else {
+            message.setChatId(update.getMessage().getChatId().toString());
+        }
         message.setText("Добро пожаловать в бот с рецептами! Используйте /help для получения списка команд.");
 
         return message;

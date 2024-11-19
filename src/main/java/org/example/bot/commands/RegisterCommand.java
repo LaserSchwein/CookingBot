@@ -37,34 +37,33 @@ public class RegisterCommand implements Command {
         long userId;
         String userName;
 
-        if (update.hasMessage() && update.getMessage().hasText()) {
+        if (update.hasMessage() && update.getMessage().hasText()){
             userId = update.getMessage().getFrom().getId();
             userName = update.getMessage().getFrom().getUserName();
-
-            if (step == 0) {
-                user = new User(userId, userName);
-                registerUser(user);
-            } else if (step == 6){
-                SendMessage message = new SendMessage();
-                message.setChatId(update.getMessage().getChatId().toString());
-                message.setText("Вы уже зарегистрировались");
-                return message;
-            }
-
-            CallbackQuery callbackQuery = new CallbackQuery();
-            step = databaseManager.getRegistrationStep(update.getMessage().getChatId());
-            return handleCallbackQuery(callbackQuery, update, step);
-        } else if (update.hasCallbackQuery()) {
-            step = databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId());
-
         } else {
-                SendMessage message = new SendMessage();
-                message.setChatId(update.getMessage().getChatId().toString());
-                message.setText("Ошибка регистрации: некорректный запрос.");
-                return message;
+            userId = update.getCallbackQuery().getFrom().getId();
+            userName = update.getCallbackQuery().getFrom().getUserName();
         }
 
-        System.out.println(step);
+        if (step == 0) {
+            user = new User(userId, userName);
+            registerUser(user);
+        }
+
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            step = databaseManager.getRegistrationStep(update.getMessage().getChatId());
+            System.out.println("Step from message: " + step);
+        } else if (update.hasCallbackQuery()) {
+            step = databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId());
+            System.out.println("Step from callback: " + step);
+        } else {
+            SendMessage message = new SendMessage();
+            message.setChatId(update.getMessage().getChatId().toString());
+            message.setText("Ошибка регистрации: некорректный запрос.");
+            return message;
+        }
+
+        System.out.println("Final step: " + step);
         return handleCallbackQuery(update.getCallbackQuery(), update, step);
     }
 
@@ -77,9 +76,14 @@ public class RegisterCommand implements Command {
 
     private SendMessage askLanguageQuestion(Update update) {
         SendMessage message = new SendMessage();
-        message.setChatId(update.getMessage().getChatId().toString());
-        message.setText("На каком языке вы разговариваете?");
 
+        if (update.getMessage() == null) {
+            message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+        } else {
+            message.setChatId(update.getMessage().getChatId().toString());
+        }
+
+        message.setText("На каком языке вы разговариваете?");
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
@@ -98,6 +102,21 @@ public class RegisterCommand implements Command {
         databaseManager.updateRegistrationStep(user.getUserId(), step);
 
         return message;
+    }
+
+    public InlineKeyboardMarkup first_Keyboard(){
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(createPut("Русский", "language_ru"));
+        row.add(createPut("Английский", "language_en"));
+        row.add(createPut("Немецкий", "language_de"));
+        row.add(createPut("Французский", "language_fr"));
+        row.add(createPut("Испанский", "language_es"));
+        rows.add(row);
+        markup.setKeyboard(rows);
+
+        return markup;
     }
 
     private SendMessage askVeganQuestion(Update update) {
@@ -179,10 +198,9 @@ public class RegisterCommand implements Command {
     }
 
     public SendMessage handleCallbackQuery(CallbackQuery callbackQuery, Update update, int step) {
+        String data = "";
 
-        String data = new String();
-
-        if (step != 0) {
+        if (step != 0 & step != 5) {
             data = callbackQuery.getData();
         }
         if (step == 0) {
@@ -216,6 +234,7 @@ public class RegisterCommand implements Command {
         }
         return null;
     }
+
 
     public void registerUser(User user) {
         databaseManager.addUser(user);

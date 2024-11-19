@@ -14,7 +14,11 @@ public class InfoCommand implements Command {
     @Override
     public SendMessage getContent(Update update) {
         SendMessage message = new SendMessage();
-        message.setChatId(update.getMessage().getChatId().toString());
+        if (update.getMessage() == null) {
+            message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+        } else {
+            message.setChatId(update.getMessage().getChatId().toString());
+        }
         message.setText("Это универсальный бот, который поможет вам выбрать блюдо, написать рецепт из имеющихся у вас ингредиентов и многое другое.");
 
         return message;

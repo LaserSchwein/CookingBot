@@ -18,9 +18,7 @@ public class User {
     }
 
     // Геттеры и сеттеры
-    public long getUserId() {
-        return userId;
-    }
+    public long getUserId() { return userId; }
 
     public String getUserName() {
         return userName;
