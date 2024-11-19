@@ -3,15 +3,24 @@ package org.example.bot;
 import org.example.bot.commands.*;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Properties;
 
 public class TelegramBot extends TelegramLongPollingBot {
@@ -70,25 +79,30 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             // Проверка наличия команды в хеш-таблице
             Command command = commands.get(text);
-            if (command != null) {
-                sendMessage = command.getContent(update);
 
-                if (command instanceof HelpCommand) {
-                    sendMessage.setReplyMarkup(((HelpCommand) command).createInlineCommandsKeyboard());
+            if (command != null) {
+                int step = databaseManager.getRegistrationStep(update.getMessage().getChatId());
+
+                if (command.getCommand().equals("/register")) {
+                    if (step == 4 || step == 6) {
+                        sendMessage.setText("Вы уже зарегестрировались");
+                    }
+                    else {
+                        sendMessage = command.getContent(update);
+                    }
+                }
+                else {
+                    sendMessage = command.getContent(update);
                 }
 
                 if (command.getCommand().equals("/start")) {
                     sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
                 }
 
-            } else if (databaseManager.getRegistrationStep(update.getMessage().getChatId()) == 5){
+            } else if (databaseManager.getRegistrationStep(update.getMessage().getChatId()) == 5) {
+
                 RegisterCommand registerCommand = (RegisterCommand) commands.get("/register");
                 sendMessage = registerCommand.getContent(update);
-                try {
-                    this.execute(sendMessage);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
             } else {
                 sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
                 sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
@@ -128,14 +142,36 @@ public class TelegramBot extends TelegramLongPollingBot {
                 EditMessageText editMessageText = new EditMessageText();
                 editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
                 editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
-                editMessageText.setText(command.getContent(update).getText());
+
+                if (command instanceof RegisterCommand) {
+                    int step = databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId());
+
+                    if (step == 4 || step == 6) {
+                        editMessageText.setText("Вы уже зарегестрировались");
+                    } else {
+                        editMessageText.setText(command.getContent(update).getText());
+                    }
+
+                } else {
+                    editMessageText.setText(command.getContent(update).getText());
+                }
 
                 EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
                 editMarkup.setChatId(callbackQuery.getMessage().getChatId().toString());
                 editMarkup.setMessageId(callbackQuery.getMessage().getMessageId());
 
+
                 if (command instanceof HelpCommand) {
                     editMarkup.setReplyMarkup(((HelpCommand) command).createInlineCommandsKeyboard());
+                } else if (command instanceof RegisterCommand) {
+                    int step = databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId());
+
+                    if (step == 4 || step == 6) {
+                        editMarkup.setReplyMarkup(command.createHelpBackButtonKeyboard());
+                    } else {
+                        editMarkup.setReplyMarkup(((RegisterCommand) command).first_Keyboard());
+                    }
+
                 } else {
                     editMarkup.setReplyMarkup(command.createHelpBackButtonKeyboard());
                 }
@@ -168,7 +204,5 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
             }
         }
-
-
     }
 }

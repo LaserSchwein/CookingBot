@@ -15,7 +15,12 @@ public class AuthorsCommand implements Command {
     @Override
     public SendMessage getContent(Update update) {
         SendMessage message = new SendMessage();
-        message.setChatId(update.getMessage().getChatId().toString());
+        if (update.getMessage() == null) {
+            message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+        } else {
+            message.setChatId(update.getMessage().getChatId().toString());
+        }
+
         message.setText("Авторы: @sobol_eg, @ZAntoshkAZ, @polska_stronker");
 
         return message;
