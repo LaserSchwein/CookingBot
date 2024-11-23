@@ -1,4 +1,4 @@
-package org.example.bot;
+package org.example.bot.database;
 
 import java.io.FileInputStream;
 import java.io.IOException;

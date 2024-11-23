@@ -1,4 +1,4 @@
-package org.example.bot;
+package org.example.bot.database;
 
 public class User {
     private long userId;

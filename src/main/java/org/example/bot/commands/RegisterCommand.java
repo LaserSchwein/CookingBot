@@ -1,13 +1,15 @@
 package org.example.bot.commands;
 
-import org.example.bot.DatabaseManager;
-import org.example.bot.User;
+import org.example.bot.EditMessageContainer;
+import org.example.bot.database.DatabaseManager;
+import org.example.bot.database.User;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,28 +47,178 @@ public class RegisterCommand implements Command {
             userName = update.getCallbackQuery().getFrom().getUserName();
         }
 
-        if (step == 0) {
             user = new User(userId, userName);
             registerUser(user);
+
+        return askVeganQuestion(update);
+    }
+
+    private SendMessage askVeganQuestion(Update update) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(createPut("Да", "vegan_yes"));
+        row.add(createPut("Нет", "vegan_no"));
+        rows.add(row);
+        markup.setKeyboard(rows);
+
+        SendMessage message = new SendMessage();
+
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            message.setChatId(update.getMessage().getChatId());
+        } else {
+            message.setChatId(update.getCallbackQuery().getMessage().getChatId());
         }
+
+        message.setText("Вы веган?");
+        message.setReplyMarkup(markup);
+
+        step = 1;
+        databaseManager.updateRegistrationStep(user.getUserId(), step);
+
+        return message;
+    }
+
+    public InlineKeyboardMarkup first_Keyboard(){
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(createPut("Да", "vegan_yes"));
+        row.add(createPut("Нет", "vegan_no"));
+        rows.add(row);
+
+        markup.setKeyboard(rows);
+
+        return markup;
+    }
+
+    public EditMessageContainer registration(Update update){
 
         if (update.hasMessage() && update.getMessage().hasText()) {
             step = databaseManager.getRegistrationStep(update.getMessage().getChatId());
             System.out.println("Step from message: " + step);
-        } else if (update.hasCallbackQuery()) {
+        } else {
             step = databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId());
             System.out.println("Step from callback: " + step);
-        } else {
-            SendMessage message = new SendMessage();
-            message.setChatId(update.getMessage().getChatId().toString());
-            message.setText("Ошибка регистрации: некорректный запрос.");
-            return message;
         }
 
         System.out.println("Final step: " + step);
         return handleCallbackQuery(update.getCallbackQuery(), update, step);
     }
 
+    private EditMessageContainer askVegetarianQuestion(Update update) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> firstRow = new ArrayList<>();
+        firstRow.add(createPut("Да", "vegetarian_yes"));
+        firstRow.add(createPut("Нет", "vegetarian_no"));
+        rows.add(firstRow);
+
+        List<InlineKeyboardButton> secondRow = new ArrayList<>();
+        secondRow.add(createPut("⬅️ Назад", "back"));
+        rows.add(secondRow);
+
+        markup.setKeyboard(rows);
+
+        EditMessageContainer editMessageContainer = new EditMessageContainer(
+                crateEditMessageText(update, "Вы вегетарианец?"),
+                crateEditMessageReplyMarkup(update, markup));
+
+        step = 2;
+        databaseManager.updateRegistrationStep(user.getUserId(), step);
+
+        return editMessageContainer;
+    }
+
+    private EditMessageContainer askAllergiesQuestion(Update update) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> firstRow = new ArrayList<>();
+        firstRow.add(createPut("Да", "allergies_yes"));
+        firstRow.add(createPut("Нет", "allergies_no"));
+        rows.add(firstRow);
+
+        List<InlineKeyboardButton> secondRow = new ArrayList<>();
+        secondRow.add(createPut("⬅️ Назад", "back"));
+        rows.add(secondRow);
+
+        markup.setKeyboard(rows);
+
+        EditMessageContainer editMessageContainer = new EditMessageContainer(
+                crateEditMessageText(update, "Есть ли у вас аллергии?"),
+                crateEditMessageReplyMarkup(update, markup));
+
+        step = 3;
+        databaseManager.updateRegistrationStep(user.getUserId(), step);
+
+        return editMessageContainer;
+    }
+
+    private EditMessageContainer askAllergiesDetailsQuestion(Update update) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(createPut("⬅️ Назад", "back"));
+        rows.add(row);
+
+        markup.setKeyboard(rows);
+
+        EditMessageContainer editMessageContainer = new EditMessageContainer(
+                crateEditMessageText(update, "Какие у вас аллергии?"),
+                crateEditMessageReplyMarkup(update, markup));
+
+        step = 4;
+        databaseManager.updateRegistrationStep(user.getUserId(), step);
+
+        return editMessageContainer;
+    }
+
+    public EditMessageContainer handleCallbackQuery(CallbackQuery callbackQuery, Update update, int step) {
+        String data = "";
+
+        if (update.hasCallbackQuery()) {
+            data = callbackQuery.getData();
+        }
+
+        if (data.equals("back")){
+            step -= 2;
+        }
+
+        if (step == 0) {
+            databaseManager.updateRegistrationStep(user.getUserId(), 1);
+
+            return new EditMessageContainer(
+                    crateEditMessageText(update, "Вы веган?"),
+                    crateEditMessageReplyMarkup(update, first_Keyboard()));
+        } else if (step == 1) {
+            databaseManager.updateVegan(user.getUserId(), data.equals("vegan_yes"));
+            return askVegetarianQuestion(update);
+        } else if (step == 2) {
+            databaseManager.updateVegetarian(user.getUserId(), data.equals("vegetarian_yes"));
+            return askAllergiesQuestion(update);
+        } else if (step == 3) {
+            databaseManager.updateHasAllergies(user.getUserId(), data.equals("allergies_yes"));
+            if (databaseManager.hasAllergies(user.getUserId())) {
+                return askAllergiesDetailsQuestion(update);
+            } else {
+                return new EditMessageContainer(
+                        crateEditMessageText(update, "Вы зарегистрировались"),
+                        crateEditMessageReplyMarkup(update, new InlineKeyboardMarkup()));
+            }
+        } else if (step == 4) {
+            databaseManager.updateAllergies(user.getUserId(), update.getMessage().getText());
+            databaseManager.updateRegistrationStep(user.getUserId(), 5);
+            return new EditMessageContainer(
+                    crateEditMessageText(update, "Вы зарегистрировались"),
+                    crateEditMessageReplyMarkup(update, new InlineKeyboardMarkup()));
+        }
+        return null;
+    }
+
+
+    public void registerUser(User user) {
+        databaseManager.addUser(user);
+    }
     private InlineKeyboardButton createPut(String language, String data) {
         InlineKeyboardButton put = new InlineKeyboardButton();
         put.setText(language);
@@ -74,15 +226,39 @@ public class RegisterCommand implements Command {
         return put;
     }
 
-    private SendMessage askLanguageQuestion(Update update) {
-        SendMessage message = new SendMessage();
+    private EditMessageText crateEditMessageText(Update update, String question) {
+        EditMessageText editMessageText = new EditMessageText();
 
-        if (update.getMessage() == null) {
-            message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+        if (update.hasMessage() && update.getMessage().hasText()){
+            editMessageText.setChatId(update.getMessage().getChatId().toString());
+            editMessageText.setMessageId(update.getMessage().getMessageId());
         } else {
-            message.setChatId(update.getMessage().getChatId().toString());
+            editMessageText.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+            editMessageText.setMessageId(update.getCallbackQuery().getMessage().getMessageId());
         }
 
+        editMessageText.setText(question);
+
+        return editMessageText;
+    }
+
+    private EditMessageReplyMarkup crateEditMessageReplyMarkup(Update update, InlineKeyboardMarkup markup) {
+        EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup();
+
+        if (update.hasMessage() && update.getMessage().hasText()){
+            editMessageReplyMarkup.setChatId(update.getMessage().getChatId().toString());
+            editMessageReplyMarkup.setMessageId(update.getMessage().getMessageId());
+        } else {
+            editMessageReplyMarkup.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+            editMessageReplyMarkup.setMessageId(update.getCallbackQuery().getMessage().getMessageId());
+        }
+
+        editMessageReplyMarkup.setReplyMarkup(markup);
+
+        return editMessageReplyMarkup;
+    }
+}
+/*
         message.setText("На каком языке вы разговариваете?");
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
@@ -96,147 +272,4 @@ public class RegisterCommand implements Command {
         markup.setKeyboard(rows);
 
         message.setReplyMarkup(markup);
-
-        // Сохраняем текущий шаг
-        step = 1;
-        databaseManager.updateRegistrationStep(user.getUserId(), step);
-
-        return message;
-    }
-
-    public InlineKeyboardMarkup first_Keyboard(){
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(createPut("Русский", "language_ru"));
-        row.add(createPut("Английский", "language_en"));
-        row.add(createPut("Немецкий", "language_de"));
-        row.add(createPut("Французский", "language_fr"));
-        row.add(createPut("Испанский", "language_es"));
-        rows.add(row);
-        markup.setKeyboard(rows);
-
-        return markup;
-    }
-
-    private SendMessage askVeganQuestion(Update update) {
-        SendMessage message = new SendMessage();
-        message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
-        message.setText("Вы веган?");
-
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(createPut("Да", "vegan_yes"));
-        row.add(createPut("Нет", "vegan_no"));
-        rows.add(row);
-        markup.setKeyboard(rows);
-
-        message.setReplyMarkup(markup);
-
-        // Сохраняем текущий шаг
-        step = 2;
-        databaseManager.updateRegistrationStep(user.getUserId(), step);
-
-        return message;
-    }
-
-    private SendMessage askVegetarianQuestion(Update update) {
-        SendMessage message = new SendMessage();
-        message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
-        message.setText("Вы вегетарианец?");
-
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(createPut("Да", "vegetarian_yes"));
-        row.add(createPut("Нет", "vegetarian_no"));
-        rows.add(row);
-        markup.setKeyboard(rows);
-
-        message.setReplyMarkup(markup);
-
-        // Сохраняем текущий шаг
-        step = 3;
-        databaseManager.updateRegistrationStep(user.getUserId(), step);
-
-        return message;
-    }
-
-    private SendMessage askAllergiesQuestion(Update update) {
-        SendMessage message = new SendMessage();
-        message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
-        message.setText("Есть ли у вас аллергии?");
-
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(createPut("Да", "allergies_yes"));
-        row.add(createPut("Нет", "allergies_no"));
-        rows.add(row);
-        markup.setKeyboard(rows);
-
-        message.setReplyMarkup(markup);
-
-        // Сохраняем текущий шаг
-        step = 4;
-        databaseManager.updateRegistrationStep(user.getUserId(), step);
-
-        return message;
-    }
-
-    private SendMessage askAllergiesDetailsQuestion(Update update) {
-        SendMessage message = new SendMessage();
-        message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
-        message.setText("Какие у вас аллергии?");
-
-        // Сохраняем текущий шаг
-        step = 5;
-        databaseManager.updateRegistrationStep(user.getUserId(), step);
-
-        return message;
-    }
-
-    public SendMessage handleCallbackQuery(CallbackQuery callbackQuery, Update update, int step) {
-        String data = "";
-
-        if (step != 0 & step != 5) {
-            data = callbackQuery.getData();
-        }
-        if (step == 0) {
-            return askLanguageQuestion(update);
-        } else if (step == 1) {
-            databaseManager.updateLanguage(user.getUserId(), data.replace("language_", ""));
-            return askVeganQuestion(update);
-        } else if (step == 2) {
-            databaseManager.updateVegan(user.getUserId(), data.equals("vegan_yes"));
-            return askVegetarianQuestion(update);
-        } else if (step == 3) {
-            databaseManager.updateVegetarian(user.getUserId(), data.equals("vegetarian_yes"));
-            return askAllergiesQuestion(update);
-        } else if (step == 4) {
-            databaseManager.updateHasAllergies(user.getUserId(), data.equals("allergies_yes"));
-            if (databaseManager.hasAllergies(user.getUserId())) {
-                return askAllergiesDetailsQuestion(update);
-            } else {
-                SendMessage message = new SendMessage();
-                message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
-                message.setText("Вы зарегистрировались");
-                return message;
-            }
-        } else if (step == 5) {
-            databaseManager.updateAllergies(user.getUserId(), update.getMessage().getText());
-            databaseManager.updateRegistrationStep(user.getUserId(), 6);
-            SendMessage message = new SendMessage();
-            message.setChatId(update.getMessage().getChatId().toString());
-            message.setText("Вы зарегистрировались");
-            return message;
-        }
-        return null;
-    }
-
-
-    public void registerUser(User user) {
-        databaseManager.addUser(user);
-    }
-}
+ */
