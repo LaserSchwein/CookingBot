@@ -163,4 +163,49 @@ public class DatabaseManager {
         }
         return false;
     }
+
+    public String getAllergies(long userId) {
+        String selectStepSQL = "SELECT allergies FROM public.users WHERE user_id = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(selectStepSQL)) {
+            statement.setLong(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getString("allergies");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    public Boolean isVegan(long userId) {
+        String selectStepSQL = "SELECT is_vegan FROM public.users WHERE user_id = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(selectStepSQL)) {
+            statement.setLong(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getBoolean("is_vegan");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public Boolean isVegetarian(long userId) {
+        String selectStepSQL = "SELECT is_vegetarian FROM public.users WHERE user_id = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(selectStepSQL)) {
+            statement.setLong(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getBoolean("is_vegetarian");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
