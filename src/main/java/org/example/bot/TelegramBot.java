@@ -19,8 +19,8 @@ import java.util.Properties;
 public class TelegramBot extends TelegramLongPollingBot {
 
     private static final LinkedHashMap<String, Command> commands = new LinkedHashMap<>();
-    private String botToken; // Поле для хранения токена бота
-    private SpoonacularAPI spoonacularAPI; // Поле для SpoonacularAPI
+    private String botToken;
+    private SpoonacularAPI spoonacularAPI;
     private final DatabaseManager databaseManager = new DatabaseManager();
     private Command currentCommand;
 
@@ -42,7 +42,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return botToken;  // Возвращаем токен, считанный из файла
+        return botToken;
     }
 
     private void loadConfig() {
@@ -108,6 +108,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 currentCommand = command;
             } else if (currentCommand != null && currentCommand instanceof RecipesCommand) {
                 sendMessage = currentCommand.getContent(update);
+                currentCommand = null;
             } else if (databaseManager.getRegistrationStep(update.getMessage().getChatId()) == 4) {
                 RegisterCommand registerCommand = (RegisterCommand) commands.get("/register");
                 EditMessageContainer editMessageContainer = registerCommand.registration(update);
@@ -129,7 +130,18 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void handleCallbackQuery(CallbackQuery callbackQuery, Update update) {
         String data = callbackQuery.getData();
-        if ("/help".equals(data)) {
+        if (data.startsWith("recipe_")) {
+            int recipeId = Integer.parseInt(data.split("_")[1]);
+            // Получите пошаговую инструкцию для рецепта и отправьте её пользователю
+            RecipesCommand recipesCommand = (RecipesCommand) commands.get("/recipes");
+            SendMessage instructionsMessage = recipesCommand.getRecipeInstructions(recipeId, callbackQuery.getMessage().getChatId());
+
+            try {
+                execute(instructionsMessage);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+        } else if ("/help".equals(data)) {
             Command helpCommand = commands.get("/help");
 
             EditMessageText editMessageText = new EditMessageText();
@@ -187,6 +199,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
+                currentCommand = command;
             } else if (data.equals("back") || data.startsWith("vegan_") || data.startsWith("vegetarian_") || data.startsWith("allergies_")) {
                 RegisterCommand registerCommand = (RegisterCommand) commands.get("/register");
                 EditMessageContainer editMessageContainer = registerCommand.registration(update);
@@ -220,5 +233,17 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
             }
         }
+    }
+
+    private String getRecipeTitleByIndex(int index) {
+        // Логика для получения названия рецепта по индексу
+        // Например, из базы данных или другого источника
+        return "Recipe Title " + index;
+    }
+
+    private String getRecipeDetailsByIndex(int index) {
+        // Логика для получения деталей рецепта по индексу
+        // Например, из базы данных или другого источника
+        return "Recipe Details " + index;
     }
 }

@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
@@ -22,6 +24,8 @@ public class HelpCommandTest {
     private LinkedHashMap<String, Command> commandMap;
     private MockedStatic<TelegramBot> mockedStatic;
     private Update update;
+    private Message message;
+    private Chat chat;
 
     @BeforeEach
     public void setUp() {
@@ -29,6 +33,9 @@ public class HelpCommandTest {
         commandMap = createCommandMap();
         mockedStatic = mockStatic(TelegramBot.class);
         mockedStatic.when(TelegramBot::getCommandMap).thenReturn(commandMap);
+        update = mock(Update.class);
+        message = mock(Message.class);
+        chat = mock(Chat.class);
     }
 
     @AfterEach
@@ -42,6 +49,7 @@ public class HelpCommandTest {
         commandMap.put("/info", new InfoCommand());
         commandMap.put("/authors", new AuthorsCommand());
         commandMap.put("/register", new RegisterCommand());
+        commandMap.put("/recipes", new RecipesCommand(null, null)); // Adding RecipesCommand for completeness
         return commandMap;
     }
 
@@ -56,13 +64,22 @@ public class HelpCommandTest {
     @Test
     @DisplayName("Проверка текста помощи для команды /help")
     public void testGetContent() {
+        // Устанавливаем mock данные
+        when(message.getChatId()).thenReturn(123456L);
+        when(update.getMessage()).thenReturn(message);
+
         String expectedContent = "Доступные команды:\n" +
                 "/start - Запуск бота\n" +
                 "/info - Информация о боте\n" +
                 "/authors - Авторы\n" +
-                "/register - Регистрация аккаунта в боте\n";
+                "/register - Регистрация аккаунта в боте\n" +
+                "/recipes - Подобрать рецепты на основе ваших предпочтений.\n";
 
-        String actualContent = helpCommand.getContent(update);
+        // Вызываем метод и получаем результат
+        SendMessage sendMessage = helpCommand.getContent(update);
+        String actualContent = sendMessage.getText();
+
+        // Проверяем результат
         assertEquals(expectedContent, actualContent, "Контент помощи должен соответствовать ожидаемому");
     }
 
