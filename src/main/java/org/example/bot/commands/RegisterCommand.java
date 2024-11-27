@@ -47,8 +47,8 @@ public class RegisterCommand implements Command {
             userName = update.getCallbackQuery().getFrom().getUserName();
         }
 
-            user = new User(userId, userName);
-            registerUser(user);
+        user = new User(userId, userName);
+        registerUser(user);
 
         return askVeganQuestion(update);
     }
@@ -93,6 +93,21 @@ public class RegisterCommand implements Command {
     }
 
     public EditMessageContainer registration(Update update){
+        if (user == null) {
+            long userId;
+            String userName;
+
+            if (update.hasMessage() && update.getMessage().hasText()) {
+                userId = update.getMessage().getFrom().getId();
+                userName = update.getMessage().getFrom().getUserName();
+            } else {
+                userId = update.getCallbackQuery().getFrom().getId();
+                userName = update.getCallbackQuery().getFrom().getUserName();
+            }
+
+            user = new User(userId, userName);
+        }
+
 
         if (update.hasMessage() && update.getMessage().hasText()) {
             step = databaseManager.getRegistrationStep(update.getMessage().getChatId());
@@ -187,6 +202,7 @@ public class RegisterCommand implements Command {
         if (step == 0) {
             databaseManager.updateRegistrationStep(user.getUserId(), 1);
 
+
             return new EditMessageContainer(
                     crateEditMessageText(update, "Вы веган?"),
                     crateEditMessageReplyMarkup(update, first_Keyboard()));
@@ -215,10 +231,10 @@ public class RegisterCommand implements Command {
         return null;
     }
 
-
     public void registerUser(User user) {
         databaseManager.addUser(user);
     }
+
     private InlineKeyboardButton createPut(String language, String data) {
         InlineKeyboardButton put = new InlineKeyboardButton();
         put.setText(language);
@@ -258,18 +274,3 @@ public class RegisterCommand implements Command {
         return editMessageReplyMarkup;
     }
 }
-/*
-        message.setText("На каком языке вы разговариваете?");
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(createPut("Русский", "language_ru"));
-        row.add(createPut("Английский", "language_en"));
-        row.add(createPut("Немецкий", "language_de"));
-        row.add(createPut("Французский", "language_fr"));
-        row.add(createPut("Испанский", "language_es"));
-        rows.add(row);
-        markup.setKeyboard(rows);
-
-        message.setReplyMarkup(markup);
- */

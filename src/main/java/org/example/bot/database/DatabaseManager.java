@@ -37,11 +37,19 @@ public class DatabaseManager {
     public void connectToDatabase() {
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
-            System.out.println("База данных: " + URL + " успешно подключена.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
+    public Connection getConnection() {
+        return connection;
+    }
+
+    public DatabaseManager(Connection connection) {
+        this.connection = connection;
+    }
+
 
     public void addUser(User user) {
         String insertUserSQL = "INSERT INTO public.users (user_id, user_name, language, is_vegan, is_vegetarian, has_allergies, allergies, registration_step) " +
