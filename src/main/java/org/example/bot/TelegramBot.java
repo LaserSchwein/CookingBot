@@ -21,10 +21,11 @@ public class TelegramBot extends TelegramLongPollingBot {
     private static final LinkedHashMap<String, Command> commands = new LinkedHashMap<>();
     private String botToken;
     private SpoonacularAPI spoonacularAPI;
-    private final DatabaseManager databaseManager = new DatabaseManager();
+    private final DatabaseManager databaseManager;
     private Command currentCommand;
 
-    public TelegramBot() {
+    public TelegramBot(DatabaseManager databaseManager) {
+        this.databaseManager = databaseManager;
         loadConfig();  // Загружаем токен бота и API токен Spoonacular
 
         // Регистрация команд
@@ -32,7 +33,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         commands.put("/help", new HelpCommand());
         commands.put("/info", new InfoCommand());
         commands.put("/authors", new AuthorsCommand());
-        commands.put("/register", new RegisterCommand());
+        commands.put("/register", new RegisterCommand(databaseManager));
         commands.put("/recipes", new RecipesCommand(spoonacularAPI, databaseManager));
     }
 
@@ -106,11 +107,12 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
 
                 currentCommand = command;
-            } else if (currentCommand != null && currentCommand instanceof RecipesCommand) {
+            } else if (currentCommand instanceof RecipesCommand) {
                 sendMessage = currentCommand.getContent(update);
                 currentCommand = null;
             } else if (databaseManager.getRegistrationStep(update.getMessage().getChatId()) == 4) {
                 RegisterCommand registerCommand = (RegisterCommand) commands.get("/register");
+
                 EditMessageContainer editMessageContainer = registerCommand.registration(update);
                 sendMessage.setText(editMessageContainer.getEditMessageText());
             } else {
@@ -130,38 +132,34 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void handleCallbackQuery(CallbackQuery callbackQuery, Update update) {
         String data = callbackQuery.getData();
+
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
+        editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
+
+        EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
+        editMarkup.setChatId(callbackQuery.getMessage().getChatId().toString());
+        editMarkup.setMessageId(callbackQuery.getMessage().getMessageId());
+
         if (data.startsWith("recipe_")) {
             int recipeId = Integer.parseInt(data.split("_")[1]);
             // Получите пошаговую инструкцию для рецепта и отправьте её пользователю
             RecipesCommand recipesCommand = (RecipesCommand) commands.get("/recipes");
-            SendMessage instructionsMessage = recipesCommand.getRecipeInstructions(recipeId, callbackQuery.getMessage().getChatId());
+            EditMessageContainer instructionsMessage = recipesCommand.getRecipeInstructions(update, recipeId);
+            editMessageText.setText(instructionsMessage.getEditMessageText());
+            editMessageText.setReplyMarkup(instructionsMessage.getEditMessageReplyMarkup());
 
-            try {
-                execute(instructionsMessage);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
-        } else if ("/help".equals(data)) {
+
+        } else if (data.equals("/help")) {
             Command helpCommand = commands.get("/help");
 
-            EditMessageText editMessageText = new EditMessageText();
-            editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
-            editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
             editMessageText.setText(helpCommand.getContent(update).getText());
-            editMessageText.setReplyMarkup(((HelpCommand) helpCommand).createInlineCommandsKeyboard());
-
-            try {
-                this.execute(editMessageText);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
+            editMarkup.setReplyMarkup(((HelpCommand) helpCommand).createInlineCommandsKeyboard());
         } else {
             Command command = commands.get(data);
 
             if (command != null) {
-                EditMessageText editMessageText = new EditMessageText();
-                editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
-                editMessageText.setMessageId(callbackQuery.getMessage().getMessageId());
+                currentCommand = command;
 
                 if (command instanceof RegisterCommand) {
                     int step = databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId());
@@ -174,10 +172,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 } else {
                     editMessageText.setText(command.getContent(update).getText());
                 }
-
-                EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
-                editMarkup.setChatId(callbackQuery.getMessage().getChatId().toString());
-                editMarkup.setMessageId(callbackQuery.getMessage().getMessageId());
 
                 if (command instanceof HelpCommand) {
                     editMarkup.setReplyMarkup(((HelpCommand) command).createInlineCommandsKeyboard());
@@ -193,57 +187,19 @@ public class TelegramBot extends TelegramLongPollingBot {
                     editMarkup.setReplyMarkup(command.createHelpBackButtonKeyboard());
                 }
 
-                try {
-                    this.execute(editMessageText);   // Сначала обновляем текст сообщения
-                    this.execute(editMarkup);        // обновляем клавиатуру
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
-                currentCommand = command;
             } else if (data.equals("back") || data.startsWith("vegan_") || data.startsWith("vegetarian_") || data.startsWith("allergies_")) {
                 RegisterCommand registerCommand = (RegisterCommand) commands.get("/register");
                 EditMessageContainer editMessageContainer = registerCommand.registration(update);
 
-                EditMessageText editMessageText = new EditMessageText();
-                editMessageText.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
-                editMessageText.setMessageId(update.getCallbackQuery().getMessage().getMessageId());
                 editMessageText.setText(editMessageContainer.getEditMessageText());
-
-                EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
-                editMarkup.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
-                editMarkup.setMessageId(update.getCallbackQuery().getMessage().getMessageId());
                 editMarkup.setReplyMarkup(editMessageContainer.getEditMessageReplyMarkup());
-
-                try {
-                    this.execute(editMessageText);
-                    this.execute(editMarkup);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                SendMessage sendMessage = new SendMessage();
-                sendMessage.setChatId(callbackQuery.getMessage().getChatId().toString());
-                sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
-                sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
-
-                try {
-                    this.execute(sendMessage);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
             }
         }
-    }
-
-    private String getRecipeTitleByIndex(int index) {
-        // Логика для получения названия рецепта по индексу
-        // Например, из базы данных или другого источника
-        return "Recipe Title " + index;
-    }
-
-    private String getRecipeDetailsByIndex(int index) {
-        // Логика для получения деталей рецепта по индексу
-        // Например, из базы данных или другого источника
-        return "Recipe Details " + index;
+        try {
+            this.execute(editMessageText);
+            this.execute(editMarkup);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 }

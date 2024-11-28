@@ -15,9 +15,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RegisterCommand implements Command {
-    private final DatabaseManager databaseManager = new DatabaseManager();
+    private final DatabaseManager databaseManager;
     private User user;
     private int step = 0;
+
+    public RegisterCommand(DatabaseManager databaseManager) {
+        this.databaseManager = databaseManager;
+    }
 
     @Override
     public String getDescription() {
@@ -135,14 +139,12 @@ public class RegisterCommand implements Command {
 
         markup.setKeyboard(rows);
 
-        EditMessageContainer editMessageContainer = new EditMessageContainer(
-                crateEditMessageText(update, "Вы вегетарианец?"),
-                crateEditMessageReplyMarkup(update, markup));
-
         step = 2;
         databaseManager.updateRegistrationStep(user.getUserId(), step);
 
-        return editMessageContainer;
+        return new EditMessageContainer(update,
+                "Вы вегетарианец?",
+                markup);
     }
 
     private EditMessageContainer askAllergiesQuestion(Update update) {
@@ -159,14 +161,12 @@ public class RegisterCommand implements Command {
 
         markup.setKeyboard(rows);
 
-        EditMessageContainer editMessageContainer = new EditMessageContainer(
-                crateEditMessageText(update, "Есть ли у вас аллергии?"),
-                crateEditMessageReplyMarkup(update, markup));
-
         step = 3;
         databaseManager.updateRegistrationStep(user.getUserId(), step);
 
-        return editMessageContainer;
+        return new EditMessageContainer(update,
+                "Есть ли у вас аллергии?",
+                markup);
     }
 
     private EditMessageContainer askAllergiesDetailsQuestion(Update update) {
@@ -178,14 +178,12 @@ public class RegisterCommand implements Command {
 
         markup.setKeyboard(rows);
 
-        EditMessageContainer editMessageContainer = new EditMessageContainer(
-                crateEditMessageText(update, "Какие у вас аллергии?"),
-                crateEditMessageReplyMarkup(update, markup));
-
         step = 4;
         databaseManager.updateRegistrationStep(user.getUserId(), step);
 
-        return editMessageContainer;
+        return new EditMessageContainer(update,
+                "Какие у вас аллергии?",
+                markup);
     }
 
     public EditMessageContainer handleCallbackQuery(CallbackQuery callbackQuery, Update update, int step) {
@@ -202,10 +200,9 @@ public class RegisterCommand implements Command {
         if (step == 0) {
             databaseManager.updateRegistrationStep(user.getUserId(), 1);
 
-
-            return new EditMessageContainer(
-                    crateEditMessageText(update, "Вы веган?"),
-                    crateEditMessageReplyMarkup(update, first_Keyboard()));
+            return new EditMessageContainer(update,
+                    "Вы веган?",
+                    first_Keyboard());
         } else if (step == 1) {
             databaseManager.updateVegan(user.getUserId(), data.equals("vegan_yes"));
             return askVegetarianQuestion(update);
@@ -217,16 +214,16 @@ public class RegisterCommand implements Command {
             if (databaseManager.hasAllergies(user.getUserId())) {
                 return askAllergiesDetailsQuestion(update);
             } else {
-                return new EditMessageContainer(
-                        crateEditMessageText(update, "Вы зарегистрировались"),
-                        crateEditMessageReplyMarkup(update, new InlineKeyboardMarkup()));
+                return new EditMessageContainer(update,
+                        "Вы зарегистрировались",
+                        createEmptyKeyboard());
             }
         } else if (step == 4) {
             databaseManager.updateAllergies(user.getUserId(), update.getMessage().getText());
             databaseManager.updateRegistrationStep(user.getUserId(), 5);
-            return new EditMessageContainer(
-                    crateEditMessageText(update, "Вы зарегистрировались"),
-                    crateEditMessageReplyMarkup(update, new InlineKeyboardMarkup()));
+            return new EditMessageContainer(update,
+                    "Вы зарегистрировались",
+                    createEmptyKeyboard());
         }
         return null;
     }
@@ -235,42 +232,17 @@ public class RegisterCommand implements Command {
         databaseManager.addUser(user);
     }
 
-    private InlineKeyboardButton createPut(String language, String data) {
+    private InlineKeyboardButton createPut(String text, String data) {
         InlineKeyboardButton put = new InlineKeyboardButton();
-        put.setText(language);
+        put.setText(text);
         put.setCallbackData(data);
         return put;
     }
 
-    private EditMessageText crateEditMessageText(Update update, String question) {
-        EditMessageText editMessageText = new EditMessageText();
-
-        if (update.hasMessage() && update.getMessage().hasText()){
-            editMessageText.setChatId(update.getMessage().getChatId().toString());
-            editMessageText.setMessageId(update.getMessage().getMessageId());
-        } else {
-            editMessageText.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
-            editMessageText.setMessageId(update.getCallbackQuery().getMessage().getMessageId());
-        }
-
-        editMessageText.setText(question);
-
-        return editMessageText;
-    }
-
-    private EditMessageReplyMarkup crateEditMessageReplyMarkup(Update update, InlineKeyboardMarkup markup) {
-        EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup();
-
-        if (update.hasMessage() && update.getMessage().hasText()){
-            editMessageReplyMarkup.setChatId(update.getMessage().getChatId().toString());
-            editMessageReplyMarkup.setMessageId(update.getMessage().getMessageId());
-        } else {
-            editMessageReplyMarkup.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
-            editMessageReplyMarkup.setMessageId(update.getCallbackQuery().getMessage().getMessageId());
-        }
-
-        editMessageReplyMarkup.setReplyMarkup(markup);
-
-        return editMessageReplyMarkup;
+    private InlineKeyboardMarkup createEmptyKeyboard() {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        inlineKeyboardMarkup.setKeyboard(rows);
+        return inlineKeyboardMarkup;
     }
 }

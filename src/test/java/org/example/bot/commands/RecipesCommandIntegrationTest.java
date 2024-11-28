@@ -45,16 +45,23 @@ public class RecipesCommandIntegrationTest {
         Mockito.when(update.getMessage()).thenReturn(message);
         Mockito.when(message.hasText()).thenReturn(true);
         Mockito.when(message.getChatId()).thenReturn(12345L);
-        Mockito.when(message.getText()).thenReturn("banana");
+        Mockito.when(message.getText()).thenReturn("tomato, cheese, chicken");
 
         Mockito.when(databaseManager.isVegan(12345L)).thenReturn(false);
         Mockito.when(databaseManager.isVegetarian(12345L)).thenReturn(false);
         Mockito.when(databaseManager.hasAllergies(12345L)).thenReturn(false);
         Mockito.when(databaseManager.getAllergies(12345L)).thenReturn("");
 
+        String diet = "";
+        if (databaseManager.isVegan(12345L)) {
+            diet = "vegan";
+        } else if (databaseManager.isVegetarian(12345L)) {
+            diet = "vegetarian";
+        }
+
         String jsonResponse = "{\"results\":[{\"title\":\"Recipe 1\"},{\"title\":\"Recipe 2\"}]}";
         try {
-            Mockito.when(spoonacularAPI.searchRecipes("banana", "", "")).thenReturn(jsonResponse);
+            Mockito.when(spoonacularAPI.searchRecipes(message.getText(), diet, databaseManager.getAllergies(12345L))).thenReturn(jsonResponse);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -64,5 +71,34 @@ public class RecipesCommandIntegrationTest {
 
         SendMessage sendMessage = recipesCommand.getContent(update);
         assertEquals("Вот рецепты, которые можно приготовить из указанных ингредиентов:\nRecipe 1\nRecipe 2", sendMessage.getText());
+    }
+
+    @Test
+    public void testGetContentFindRecipesWithDiet() {
+        Update update = Mockito.mock(Update.class);
+        Message message = Mockito.mock(Message.class);
+        Mockito.when(update.hasMessage()).thenReturn(true);
+        Mockito.when(update.getMessage()).thenReturn(message);
+        Mockito.when(message.hasText()).thenReturn(true);
+        Mockito.when(message.getChatId()).thenReturn(12345L);
+        Mockito.when(message.getText()).thenReturn("banana");
+
+        Mockito.when(databaseManager.isVegan(12345L)).thenReturn(true);
+        Mockito.when(databaseManager.isVegetarian(12345L)).thenReturn(true);
+        Mockito.when(databaseManager.hasAllergies(12345L)).thenReturn(true);
+        Mockito.when(databaseManager.getAllergies(12345L)).thenReturn("banana");
+
+        String jsonResponse = "";
+        try {
+            Mockito.when(spoonacularAPI.searchRecipes("banana", "vegan", "banana")).thenReturn(jsonResponse);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // First call to set waitingForIngredients to true
+        recipesCommand.getContent(update);
+
+        SendMessage sendMessage = recipesCommand.getContent(update);
+        assertEquals("К сожалению, мы не нашли рецептов, которые соответствуют вашим предпочтениям.", sendMessage.getText());
     }
 }

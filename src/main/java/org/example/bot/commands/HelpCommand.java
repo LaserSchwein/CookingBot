@@ -1,5 +1,6 @@
 package org.example.bot.commands;
 
+import org.example.bot.EditMessageContainer;
 import org.example.bot.TelegramBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -12,6 +13,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class HelpCommand implements Command {
 
@@ -32,7 +34,7 @@ public class HelpCommand implements Command {
         }
         StringBuilder helpMessage = new StringBuilder("Доступные команды:\n");
         for (Map.Entry<String, Command> entry : TelegramBot.getCommandMap().entrySet()) {
-            if (!entry.getKey().equals("/help")) {
+            if (!entry.getKey().equals("/help") && !entry.getKey().equals("/start")) {
                 helpMessage.append(entry.getKey()).append(" - ").append(entry.getValue().getDescription()).append("\n");
             }
         }
@@ -70,6 +72,7 @@ public class HelpCommand implements Command {
         if (cachedInlineKeyboard == null) {
             cachedInlineKeyboard = createInlineKeyboard(); // Создаем клавиатуру только один раз
         }
+
         return cachedInlineKeyboard;
     }
 
@@ -78,15 +81,20 @@ public class HelpCommand implements Command {
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
 
         for (Map.Entry<String, Command> entry : TelegramBot.getCommandMap().entrySet()) {
-            if (!entry.getKey().equals("/help")) {
-                InlineKeyboardButton button = new InlineKeyboardButton();
-                button.setText(entry.getValue().getCommand());
-                button.setCallbackData(entry.getKey());
-                keyboard.add(List.of(button));
+            Set<String> excludedKeys = Set.of("/help", "/start");
+            if (!excludedKeys.contains(entry.getKey())) {
+                keyboard.add(List.of(createPut(entry.getValue().getCommand(), entry.getKey())));
             }
         }
 
         inlineKeyboardMarkup.setKeyboard(keyboard);
         return inlineKeyboardMarkup;
+    }
+
+    private InlineKeyboardButton createPut(String text, String data) {
+        InlineKeyboardButton put = new InlineKeyboardButton();
+        put.setText(text);
+        put.setCallbackData(data);
+        return put;
     }
 }
