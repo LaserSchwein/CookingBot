@@ -1,5 +1,6 @@
 package org.example.bot.commands;
 
+import org.example.bot.EditMessageContainer;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.example.bot.api.SpoonacularAPI;
@@ -38,23 +39,21 @@ public class RecipesCommand implements Command {
 
     @Override
     public SendMessage getContent(Update update) {
-        long chatId;
         String userInput;
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-            chatId = update.getMessage().getChatId();
+            this.chatId = update.getMessage().getChatId();
             userInput = update.getMessage().getText();
         } else {
-            chatId = update.getCallbackQuery().getMessage().getChatId();
+            this.chatId = update.getCallbackQuery().getMessage().getChatId();
             userInput = update.getCallbackQuery().getData();
         }
 
-        if (waitingForIngredients && this.chatId == chatId) {
+        if (waitingForIngredients) {
             waitingForIngredients = false;
-            return findRecipes(userInput, chatId);
+            return findRecipes(update, userInput, chatId);
         } else {
             waitingForIngredients = true;
-            this.chatId = chatId;
             return askForIngredients(chatId);
         }
     }
@@ -66,7 +65,7 @@ public class RecipesCommand implements Command {
         return message;
     }
 
-    private SendMessage findRecipes(String ingredientsInput, long chatId) {
+    private SendMessage findRecipes(Update update, String ingredientsInput, long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
 
@@ -86,7 +85,10 @@ public class RecipesCommand implements Command {
                 diet = "vegetarian";
             }
 
-            String intolerances = user.getAllergies();
+            String intolerances = "";
+            if (user.hasAllergies()) {
+                intolerances = user.getAllergies();
+            }
 
             // Поиск рецептов с помощью Spoonacular API
             String response = spoonacularAPI.searchRecipes(ingredientsInput, diet, intolerances);
@@ -116,16 +118,17 @@ public class RecipesCommand implements Command {
             JsonNode resultsNode = rootNode.get("results");
             if (resultsNode.isArray()) {
                 for (JsonNode node : resultsNode) {
-                    int id = node.get("id").asInt();
-                    recipeIds.add(id);
+                    JsonNode idNode = node.get("id");
+                    if (idNode != null) {
+                        int id = idNode.asInt();
+                        recipeIds.add(id);
+                    }
                 }
             }
         }
 
         return recipeIds;
     }
-
-
 
     public List<String> parseRecipeTitles(String jsonResponse) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
@@ -140,9 +143,12 @@ public class RecipesCommand implements Command {
                     if (count >= 5) {
                         break;
                     }
-                    String title = node.get("title").asText();
-                    recipeTitles.add(title);
-                    count++;
+                    JsonNode titleNode = node.get("title");
+                    if (titleNode != null) {
+                        String title = titleNode.asText();
+                        recipeTitles.add(title);
+                        count++;
+                    }
                 }
             }
         }
@@ -150,8 +156,11 @@ public class RecipesCommand implements Command {
         return recipeTitles;
     }
 
-
     public InlineKeyboardMarkup createRecipeSelectionKeyboard(List<String> recipeTitles, List<Integer> recipeIds) {
+        if (recipeTitles.isEmpty() || recipeIds.isEmpty()) {
+            return null;
+        }
+
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
@@ -166,22 +175,23 @@ public class RecipesCommand implements Command {
         return inlineKeyboardMarkup;
     }
 
-    public SendMessage getRecipeInstructions(int recipeId, long chatId) {
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
+    public EditMessageContainer getRecipeInstructions(Update update, int recipeId) {
+        String text;
 
         try {
             // Получение информации о рецепте
             String response = spoonacularAPI.getRecipeInformation(recipeId);
             String instructions = parseRecipeInstructions(response);
 
-            message.setText("Пошаговая инструкция для приготовления:\n" + instructions);
+            text = "Пошаговая инструкция для приготовления:\n" + instructions;
         } catch (Exception e) {
-            message.setText("Произошла ошибка при получении инструкции по приготовлению рецепта. Попробуйте позже.");
+            text = "Произошла ошибка при получении инструкции по приготовлению рецепта. Попробуйте позже.";
             e.printStackTrace();
         }
 
-        return message;
+        return new EditMessageContainer(update,
+                text,
+                createEmptyKeyboard());
     }
 
     private String parseRecipeInstructions(String jsonResponse) throws IOException {
@@ -190,25 +200,46 @@ public class RecipesCommand implements Command {
         StringBuilder instructions = new StringBuilder();
 
         if (rootNode.has("instructions")) {
-            String htmlInstructions = rootNode.get("instructions").asText();
-            // Преобразование HTML в текст
-            String plainText = Jsoup.parse(htmlInstructions).text();
-            instructions.append(plainText);
+            JsonNode instructionsNode = rootNode.get("instructions");
+            if (instructionsNode != null) {
+                String htmlInstructions = instructionsNode.asText();
+                // Преобразование HTML в текст
+                String plainText = Jsoup.parse(htmlInstructions).text();
+                instructions.append(plainText);
+            }
         } else if (rootNode.has("analyzedInstructions")) {
             JsonNode analyzedInstructions = rootNode.get("analyzedInstructions");
-            if (analyzedInstructions.isArray() && analyzedInstructions.size() > 0) {
+            if (analyzedInstructions.isArray() && !analyzedInstructions.isEmpty()) {
                 JsonNode steps = analyzedInstructions.get(0).get("steps");
                 if (steps.isArray()) {
                     for (JsonNode step : steps) {
-                        instructions.append(step.get("number").asInt())
-                                .append(". ")
-                                .append(step.get("step").asText())
-                                .append("\n");
+                        JsonNode numberNode = step.get("number");
+                        JsonNode stepNode = step.get("step");
+                        if (numberNode != null && stepNode != null) {
+                            instructions.append(numberNode.asInt())
+                                    .append(". ")
+                                    .append(stepNode.asText())
+                                    .append("\n");
+                        }
                     }
                 }
             }
         }
 
         return instructions.toString();
+    }
+
+    private InlineKeyboardButton createPut(String text, String data) {
+        InlineKeyboardButton put = new InlineKeyboardButton();
+        put.setText(text);
+        put.setCallbackData(data);
+        return put;
+    }
+
+    private InlineKeyboardMarkup createEmptyKeyboard() {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        inlineKeyboardMarkup.setKeyboard(rows);
+        return inlineKeyboardMarkup;
     }
 }

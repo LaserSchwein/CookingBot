@@ -48,7 +48,7 @@ public class HelpCommandTest {
         commandMap.put("/start", new StartCommand());
         commandMap.put("/info", new InfoCommand());
         commandMap.put("/authors", new AuthorsCommand());
-        commandMap.put("/register", new RegisterCommand());
+        commandMap.put("/register", new RegisterCommand(null));
         commandMap.put("/recipes", new RecipesCommand(null, null)); // Adding RecipesCommand for completeness
         return commandMap;
     }
@@ -69,7 +69,6 @@ public class HelpCommandTest {
         when(update.getMessage()).thenReturn(message);
 
         String expectedContent = "Доступные команды:\n" +
-                "/start - Запуск бота\n" +
                 "/info - Информация о боте\n" +
                 "/authors - Авторы\n" +
                 "/register - Регистрация аккаунта в боте\n" +

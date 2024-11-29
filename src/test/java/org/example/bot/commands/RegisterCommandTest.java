@@ -16,7 +16,9 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 
 public class RegisterCommandTest {
@@ -32,7 +34,7 @@ public class RegisterCommandTest {
     @BeforeEach
     public void setUp() {
         databaseManager = mock(DatabaseManager.class);
-        registerCommand = new RegisterCommand();
+        registerCommand = new RegisterCommand(databaseManager); // Инициализация с DatabaseManager
         mockedStatic = mockStatic(TelegramBot.class);
         update = mock(Update.class);
         message = mock(Message.class);
@@ -69,6 +71,8 @@ public class RegisterCommandTest {
         when(message.getFrom()).thenReturn(telegramUser);
         when(message.getChatId()).thenReturn(12345L);
         when(update.getMessage()).thenReturn(message);
+        when(update.hasMessage()).thenReturn(true);
+        when(update.getMessage().hasText()).thenReturn(true);
 
         SendMessage sendMessage = registerCommand.getContent(update);
         assertEquals("Вы веган?", sendMessage.getText(), "Сообщение должно быть 'Вы веган?'");
@@ -92,9 +96,8 @@ public class RegisterCommandTest {
         registerCommand.registerUser(user);
 
         EditMessageContainer editMessageContainer = registerCommand.registration(update);
-        assertEquals("Вы веган?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Вы вегетарианец?'");
+        assertEquals("Вы вегетарианец?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Вы вегетарианец?'");
     }
-
 
     @Test
     @DisplayName("Проверка обработки callback-запросов для вопроса о вегетарианцах")
@@ -127,8 +130,9 @@ public class RegisterCommandTest {
         when(callbackQuery.getData()).thenReturn("allergies_yes");
         when(message.getChatId()).thenReturn(12345L);
         when(update.getCallbackQuery()).thenReturn(callbackQuery);
+        when(databaseManager.hasAllergies(anyLong())).thenReturn(true);
 
-        when(databaseManager.getRegistrationStep(anyLong())).thenReturn(3);
+        when(databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId())).thenReturn(3);
 
         // Инициализация пользователя
         User user = new User(12345L, "testuser");
