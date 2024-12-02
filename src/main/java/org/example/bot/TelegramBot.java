@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TelegramBot extends TelegramLongPollingBot {
 
@@ -23,12 +25,12 @@ public class TelegramBot extends TelegramLongPollingBot {
     private SpoonacularAPI spoonacularAPI;
     private final DatabaseManager databaseManager;
     private Command currentCommand;
+    private static final Logger logger = Logger.getLogger(TelegramBot.class.getName());
 
     public TelegramBot(DatabaseManager databaseManager) {
         this.databaseManager = databaseManager;
-        loadConfig();  // Загружаем токен бота и API токен Spoonacular
+        loadConfig();
 
-        // Регистрация команд
         commands.put("/start", new StartCommand());
         commands.put("/help", new HelpCommand());
         commands.put("/info", new InfoCommand());
@@ -50,26 +52,24 @@ public class TelegramBot extends TelegramLongPollingBot {
         Properties properties = new Properties();
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("botToken.properties")) {
             if (input == null) {
-                System.err.println("Ошибка: не удалось найти botToken.properties");
+                logger.severe("Error: unable to find botToken.properties");
                 return;
             }
             properties.load(input);
 
-            // Загружаем токен для Telegram бота
             this.botToken = properties.getProperty("bot.token");
             if (this.botToken == null || this.botToken.isEmpty()) {
-                throw new IllegalArgumentException("Ошибка: bot.token не найден в botToken.properties");
+                throw new IllegalArgumentException("Error: bot.token not found in botToken.properties");
             }
 
-            // Загружаем токен для SpoonacularAPI
             String spoonacularApiToken = properties.getProperty("spoonacular.api.token");
             if (spoonacularApiToken == null || spoonacularApiToken.isEmpty()) {
-                throw new IllegalArgumentException("Ошибка: spoonacular.api.token не найден в botToken.properties");
+                throw new IllegalArgumentException("Error: spoonacular.api.token not found in botToken.properties");
             }
             this.spoonacularAPI = new SpoonacularAPI(spoonacularApiToken);
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Ошибка загрузки botToken.properties", e);
+            logger.log(Level.SEVERE, "Error loading botToken.properties", e);
+            throw new RuntimeException("Error loading botToken.properties", e);
         }
     }
 
@@ -86,7 +86,6 @@ public class TelegramBot extends TelegramLongPollingBot {
             SendMessage sendMessage = new SendMessage();
             sendMessage.setChatId(update.getMessage().getChatId().toString());
 
-            // Проверка наличия команды в хеш-таблице
             Command command = commands.get(text);
 
             if (command != null) {
@@ -123,7 +122,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             try {
                 this.execute(sendMessage);
             } catch (TelegramApiException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error executing sendMessage", e);
             }
         } else if (update.hasCallbackQuery()) {
             handleCallbackQuery(update.getCallbackQuery(), update);
@@ -143,12 +142,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         if (data.startsWith("recipe_")) {
             int recipeId = Integer.parseInt(data.split("_")[1]);
-            // Получите пошаговую инструкцию для рецепта и отправьте её пользователю
             RecipesCommand recipesCommand = (RecipesCommand) commands.get("/recipes");
             EditMessageContainer instructionsMessage = recipesCommand.getRecipeInstructions(update, recipeId);
             editMessageText.setText(instructionsMessage.getEditMessageText());
             editMessageText.setReplyMarkup(instructionsMessage.getEditMessageReplyMarkup());
-
 
         } else if (data.equals("/help")) {
             Command helpCommand = commands.get("/help");
@@ -199,7 +196,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             this.execute(editMessageText);
             this.execute(editMarkup);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error executing editMessageText or editMarkup", e);
         }
     }
 }
