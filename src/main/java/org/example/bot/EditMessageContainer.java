@@ -6,8 +6,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
 public class EditMessageContainer {
-    private EditMessageText editMessageText;
-    private EditMessageReplyMarkup editMessageReplyMarkup;
+    private final EditMessageText editMessageText;
+    private final EditMessageReplyMarkup editMessageReplyMarkup;
 
     public EditMessageContainer(Update update, String text, InlineKeyboardMarkup markup) {
         this.editMessageText = crateEditMessageText(update, text);

@@ -1,13 +1,13 @@
 package org.example.bot.commands;
 
 import org.example.bot.EditMessageContainer;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.example.bot.api.SpoonacularAPI;
 import org.example.bot.database.DatabaseManager;
 import org.example.bot.database.User;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jsoup.Jsoup;
@@ -15,12 +15,14 @@ import org.jsoup.Jsoup;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class RecipesCommand implements Command {
     private final SpoonacularAPI spoonacularAPI;
     private final DatabaseManager databaseManager;
     private boolean waitingForIngredients = false;
-    private long chatId;
+    private static final Logger logger = Logger.getLogger(RecipesCommand.class.getName());
 
     public RecipesCommand(SpoonacularAPI api, DatabaseManager dbManager) {
         this.spoonacularAPI = api;
@@ -41,17 +43,18 @@ public class RecipesCommand implements Command {
     public SendMessage getContent(Update update) {
         String userInput;
 
+        long chatId;
         if (update.hasMessage() && update.getMessage().hasText()) {
-            this.chatId = update.getMessage().getChatId();
+            chatId = update.getMessage().getChatId();
             userInput = update.getMessage().getText();
         } else {
-            this.chatId = update.getCallbackQuery().getMessage().getChatId();
+            chatId = update.getCallbackQuery().getMessage().getChatId();
             userInput = update.getCallbackQuery().getData();
         }
 
         if (waitingForIngredients) {
             waitingForIngredients = false;
-            return findRecipes(update, userInput, chatId);
+            return findRecipes(userInput, chatId);
         } else {
             waitingForIngredients = true;
             return askForIngredients(chatId);
@@ -62,22 +65,21 @@ public class RecipesCommand implements Command {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText("Пожалуйста, укажите ингредиенты, которые у вас есть, через запятую. Например:\nпомидоры, сыр, курица");
+        logger.info("Asking for ingredients from user with chatId: " + chatId);
         return message;
     }
 
-    private SendMessage findRecipes(Update update, String ingredientsInput, long chatId) {
+    private SendMessage findRecipes(String ingredientsInput, long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
 
         try {
-            // Получение информации о пользователе из базы данных
             User user = new User(chatId, "");
             user.setVegan(databaseManager.isVegan(chatId));
             user.setVegetarian(databaseManager.isVegetarian(chatId));
             user.setHasAllergies(databaseManager.hasAllergies(chatId));
             user.setAllergies(databaseManager.getAllergies(chatId));
 
-            // Формирование параметров для запроса
             String diet = "";
             if (user.isVegan()) {
                 diet = "vegan";
@@ -90,7 +92,6 @@ public class RecipesCommand implements Command {
                 intolerances = user.getAllergies();
             }
 
-            // Поиск рецептов с помощью Spoonacular API
             String response = spoonacularAPI.searchRecipes(ingredientsInput, diet, intolerances);
             List<String> recipeTitles = parseRecipeTitles(response);
             List<Integer> recipeIds = parseRecipeIds(response);
@@ -102,8 +103,8 @@ public class RecipesCommand implements Command {
                 message.setReplyMarkup(createRecipeSelectionKeyboard(recipeTitles, recipeIds));
             }
         } catch (Exception e) {
+            logger.log(Level.SEVERE, "Error fetching recipes", e);
             message.setText("Произошла ошибка при запросе рецептов. Попробуйте позже.");
-            e.printStackTrace();
         }
 
         return message;
@@ -179,14 +180,13 @@ public class RecipesCommand implements Command {
         String text;
 
         try {
-            // Получение информации о рецепте
             String response = spoonacularAPI.getRecipeInformation(recipeId);
             String instructions = parseRecipeInstructions(response);
 
             text = "Пошаговая инструкция для приготовления:\n" + instructions;
         } catch (Exception e) {
+            logger.log(Level.SEVERE, "Error fetching recipe instructions", e);
             text = "Произошла ошибка при получении инструкции по приготовлению рецепта. Попробуйте позже.";
-            e.printStackTrace();
         }
 
         return new EditMessageContainer(update,
@@ -203,7 +203,6 @@ public class RecipesCommand implements Command {
             JsonNode instructionsNode = rootNode.get("instructions");
             if (instructionsNode != null) {
                 String htmlInstructions = instructionsNode.asText();
-                // Преобразование HTML в текст
                 String plainText = Jsoup.parse(htmlInstructions).text();
                 instructions.append(plainText);
             }
@@ -227,13 +226,6 @@ public class RecipesCommand implements Command {
         }
 
         return instructions.toString();
-    }
-
-    private InlineKeyboardButton createPut(String text, String data) {
-        InlineKeyboardButton put = new InlineKeyboardButton();
-        put.setText(text);
-        put.setCallbackData(data);
-        return put;
     }
 
     private InlineKeyboardMarkup createEmptyKeyboard() {

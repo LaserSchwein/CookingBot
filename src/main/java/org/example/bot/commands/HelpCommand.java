@@ -1,6 +1,5 @@
 package org.example.bot.commands;
 
-import org.example.bot.EditMessageContainer;
 import org.example.bot.TelegramBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;

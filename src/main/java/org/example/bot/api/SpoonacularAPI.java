@@ -5,26 +5,27 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SpoonacularAPI {
     private final String apiToken;
     private static final String BASE_URL = "https://api.spoonacular.com";
+    private static final Logger logger = Logger.getLogger(SpoonacularAPI.class.getName());
 
-    // Конструктор для передачи токена
     public SpoonacularAPI(String apiToken) {
         this.apiToken = apiToken;
     }
 
-    // Метод для поиска рецептов по ключевым словам
     public String searchRecipes(String query, String diet, String intolerances) throws Exception {
         String endpoint = "/recipes/complexSearch";
-        String url = BASE_URL + endpoint + "?query=" + URLEncoder.encode(query, "UTF-8") +
-                "&diet=" + URLEncoder.encode(diet, "UTF-8") +
-                "&intolerances=" + URLEncoder.encode(intolerances, "UTF-8") +
+        String url = BASE_URL + endpoint + "?query=" + URLEncoder.encode(query, StandardCharsets.UTF_8) +
+                "&diet=" + URLEncoder.encode(diet, StandardCharsets.UTF_8) +
+                "&intolerances=" + URLEncoder.encode(intolerances, StandardCharsets.UTF_8) +
                 "&apiKey=" + apiToken;
 
         try {
-            // Выполнение HTTP-запроса
             HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(5000);
@@ -32,7 +33,6 @@ public class SpoonacularAPI {
 
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                // Чтение ответа
                 BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                 StringBuilder response = new StringBuilder();
                 String line;
@@ -40,23 +40,23 @@ public class SpoonacularAPI {
                     response.append(line);
                 }
                 reader.close();
+                logger.info("Successfully retrieved recipes: " + response);
                 return response.toString();
             } else {
+                logger.severe("Error: API returned code " + responseCode);
                 return "Ошибка: API вернул код " + responseCode;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error executing request", e);
             throw new Exception("Ошибка выполнения запроса: " + e.getMessage());
         }
     }
 
-    // Метод для получения информации о рецепте по ID
     public String getRecipeInformation(int recipeId) throws Exception {
         String endpoint = "/recipes/" + recipeId + "/information";
         String url = BASE_URL + endpoint + "?apiKey=" + apiToken;
 
         try {
-            // Выполнение HTTP-запроса
             HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(5000);
@@ -64,7 +64,6 @@ public class SpoonacularAPI {
 
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                // Чтение ответа
                 BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                 StringBuilder response = new StringBuilder();
                 String line;
@@ -72,12 +71,14 @@ public class SpoonacularAPI {
                     response.append(line);
                 }
                 reader.close();
+                logger.info("Successfully retrieved recipe information: " + response);
                 return response.toString();
             } else {
+                logger.severe("Error: API returned code " + responseCode);
                 return "Ошибка: API вернул код " + responseCode;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error executing request", e);
             throw new Exception("Ошибка выполнения запроса: " + e.getMessage());
         }
     }
