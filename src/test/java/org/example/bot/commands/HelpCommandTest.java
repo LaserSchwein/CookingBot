@@ -56,9 +56,9 @@ public class HelpCommandTest {
     @Test
     @DisplayName("Проверка описания команды /help")
     public void testGetDescription() {
-        String expectedDescription = "Список команд";
+        String expectedDescription = "List of commands";
         String actualDescription = helpCommand.getDescription();
-        assertEquals(expectedDescription, actualDescription, "Описание команды должно быть 'Список команд'");
+        assertEquals(expectedDescription, actualDescription, "Описание команды должно быть 'List of commands'");
     }
 
     @Test
@@ -68,11 +68,11 @@ public class HelpCommandTest {
         when(message.getChatId()).thenReturn(123456L);
         when(update.getMessage()).thenReturn(message);
 
-        String expectedContent = "Доступные команды:\n" +
-                "/info - Информация о боте\n" +
-                "/authors - Авторы\n" +
-                "/register - Регистрация аккаунта в боте\n" +
-                "/recipes - Подобрать рецепты на основе ваших предпочтений.\n";
+        String expectedContent = "Available commands:\n" +
+                "/info - Information about the bot\n" +
+                "/authors - Authors\n" +
+                "/register - Registering an account in the bot\n" +
+                "/recipes - Select recipes based on your preferences.\n";
 
         // Вызываем метод и получаем результат
         SendMessage sendMessage = helpCommand.getContent(update);

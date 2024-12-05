@@ -19,7 +19,7 @@ public class StartCommand implements Command {
         } else {
             message.setChatId(update.getMessage().getChatId().toString());
         }
-        message.setText("Добро пожаловать в бот с рецептами! Используйте /help для получения списка команд.");
+        message.setText("Welcome to the recipe bot! Use /help for a list of commands.");
 
         return message;
     }

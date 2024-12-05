@@ -93,7 +93,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                 if (command.getCommand().equals("/register")) {
                     if (step == 3 || step == 5) {
-                        sendMessage.setText("Вы уже зарегистрировались");
+                        sendMessage.setText("You have already registered");
                     } else {
                         sendMessage = command.getContent(update);
                     }
@@ -115,7 +115,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 EditMessageContainer editMessageContainer = registerCommand.registration(update);
                 sendMessage.setText(editMessageContainer.getEditMessageText());
             } else {
-                sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
+                sendMessage.setText("Sorry, I don't understand this command. Type /help for a list of commands.");
                 sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
             }
 
@@ -162,7 +162,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     int step = databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId());
 
                     if (step == 3 || step == 5) {
-                        editMessageText.setText("Вы уже зарегистрировались");
+                        editMessageText.setText("You have already registered");
                     } else {
                         editMessageText.setText(command.getContent(update).getText());
                     }

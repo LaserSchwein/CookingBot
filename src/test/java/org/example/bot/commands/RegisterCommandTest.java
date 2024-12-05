@@ -50,9 +50,9 @@ public class RegisterCommandTest {
     @Test
     @DisplayName("Проверка описания команды /register")
     public void testGetDescription() {
-        String expectedDescription = "Регистрация аккаунта в боте";
+        String expectedDescription = "Registering an account in the bot";
         String actualDescription = registerCommand.getDescription();
-        assertEquals(expectedDescription, actualDescription, "Описание команды должно быть 'Регистрация аккаунта в боте'");
+        assertEquals(expectedDescription, actualDescription, "Описание команды должно быть 'Registering an account in the bot'");
     }
 
     @Test
@@ -75,7 +75,7 @@ public class RegisterCommandTest {
         when(update.getMessage().hasText()).thenReturn(true);
 
         SendMessage sendMessage = registerCommand.getContent(update);
-        assertEquals("Вы веган?", sendMessage.getText(), "Сообщение должно быть 'Вы веган?'");
+        assertEquals("Are you vegan?", sendMessage.getText(), "Сообщение должно быть 'Are you vegan?'");
     }
 
     @Test
@@ -96,7 +96,7 @@ public class RegisterCommandTest {
         registerCommand.registerUser(user);
 
         EditMessageContainer editMessageContainer = registerCommand.registration(update);
-        assertEquals("Вы вегетарианец?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Вы вегетарианец?'");
+        assertEquals("Are you a vegetarian?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Are you a vegetarian?'");
     }
 
     @Test
@@ -117,7 +117,7 @@ public class RegisterCommandTest {
         registerCommand.registerUser(user);
 
         EditMessageContainer editMessageContainer = registerCommand.registration(update);
-        assertEquals("Есть ли у вас аллергии?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Есть ли у вас аллергии?'");
+        assertEquals("Do you have any allergies?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Do you have any allergies?'");
     }
 
     @Test
@@ -139,7 +139,7 @@ public class RegisterCommandTest {
         registerCommand.registerUser(user);
 
         EditMessageContainer editMessageContainer = registerCommand.registration(update);
-        assertEquals("Какие у вас аллергии?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Какие у вас аллергии?'");
+        assertEquals("What allergies do you have?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'What allergies do you have?'");
     }
 
     @Test
@@ -152,9 +152,9 @@ public class RegisterCommandTest {
         InlineKeyboardButton yesButton = inlineKeyboard.getKeyboard().get(0).get(0);
         InlineKeyboardButton noButton = inlineKeyboard.getKeyboard().get(0).get(1);
 
-        assertEquals("Да", yesButton.getText(), "Текст кнопки должен быть 'Да'");
+        assertEquals("Yes", yesButton.getText(), "Текст кнопки должен быть 'Yes'");
         assertEquals("vegan_yes", yesButton.getCallbackData(), "CallbackData кнопки должен быть 'vegan_yes'");
-        assertEquals("Нет", noButton.getText(), "Текст кнопки должен быть 'Нет'");
+        assertEquals("No", noButton.getText(), "Текст кнопки должен быть 'No'");
         assertEquals("vegan_no", noButton.getCallbackData(), "CallbackData кнопки должен быть 'vegan_no'");
     }
 }

@@ -20,7 +20,7 @@ public class HelpCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Список команд";
+        return "List of commands";
     }
 
     @Override
@@ -31,7 +31,7 @@ public class HelpCommand implements Command {
         } else {
             message.setChatId(update.getMessage().getChatId().toString());
         }
-        StringBuilder helpMessage = new StringBuilder("Доступные команды:\n");
+        StringBuilder helpMessage = new StringBuilder("Available commands:\n");
         for (Map.Entry<String, Command> entry : TelegramBot.getCommandMap().entrySet()) {
             if (!entry.getKey().equals("/help") && !entry.getKey().equals("/start")) {
                 helpMessage.append(entry.getKey()).append(" - ").append(entry.getValue().getDescription()).append("\n");

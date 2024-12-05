@@ -23,7 +23,7 @@ public class RegisterCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Регистрация аккаунта в боте";
+        return "Registering an account in the bot";
     }
 
     @Override
@@ -72,7 +72,7 @@ public class RegisterCommand implements Command {
             message.setChatId(update.getCallbackQuery().getMessage().getChatId());
         }
 
-        message.setText("Вы веган?");
+        message.setText("Are you vegan?");
         message.setReplyMarkup(markup);
 
         step = 1;
@@ -85,8 +85,8 @@ public class RegisterCommand implements Command {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(createPut("Да", "vegan_yes"));
-        row.add(createPut("Нет", "vegan_no"));
+        row.add(createPut("Yes", "vegan_yes"));
+        row.add(createPut("No", "vegan_no"));
         rows.add(row);
 
         markup.setKeyboard(rows);
@@ -127,8 +127,8 @@ public class RegisterCommand implements Command {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> firstRow = new ArrayList<>();
-        firstRow.add(createPut("Да", "vegetarian_yes"));
-        firstRow.add(createPut("Нет", "vegetarian_no"));
+        firstRow.add(createPut("Yes", "vegetarian_yes"));
+        firstRow.add(createPut("No", "vegetarian_no"));
         rows.add(firstRow);
 
         List<InlineKeyboardButton> secondRow = new ArrayList<>();
@@ -141,7 +141,7 @@ public class RegisterCommand implements Command {
         databaseManager.updateRegistrationStep(user.getUserId(), step);
 
         return new EditMessageContainer(update,
-                "Вы вегетарианец?",
+                "Are you a vegetarian?",
                 markup);
     }
 
@@ -149,8 +149,8 @@ public class RegisterCommand implements Command {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> firstRow = new ArrayList<>();
-        firstRow.add(createPut("Да", "allergies_yes"));
-        firstRow.add(createPut("Нет", "allergies_no"));
+        firstRow.add(createPut("Yes", "allergies_yes"));
+        firstRow.add(createPut("No", "allergies_no"));
         rows.add(firstRow);
 
         List<InlineKeyboardButton> secondRow = new ArrayList<>();
@@ -163,7 +163,7 @@ public class RegisterCommand implements Command {
         databaseManager.updateRegistrationStep(user.getUserId(), step);
 
         return new EditMessageContainer(update,
-                "Есть ли у вас аллергии?",
+                "Do you have any allergies?",
                 markup);
     }
 
@@ -180,7 +180,7 @@ public class RegisterCommand implements Command {
         databaseManager.updateRegistrationStep(user.getUserId(), step);
 
         return new EditMessageContainer(update,
-                "Какие у вас аллергии?",
+                "What allergies do you have?",
                 markup);
     }
 
@@ -199,7 +199,7 @@ public class RegisterCommand implements Command {
             databaseManager.updateRegistrationStep(user.getUserId(), 1);
 
             return new EditMessageContainer(update,
-                    "Вы веган?",
+                    "Are you vegan?",
                     first_Keyboard());
         } else if (step == 1) {
             databaseManager.updateVegan(user.getUserId(), data.equals("vegan_yes"));
@@ -213,14 +213,14 @@ public class RegisterCommand implements Command {
                 return askAllergiesDetailsQuestion(update);
             } else {
                 return new EditMessageContainer(update,
-                        "Вы зарегистрировались",
+                        "You have registered",
                         createEmptyKeyboard());
             }
         } else if (step == 4) {
             databaseManager.updateAllergies(user.getUserId(), update.getMessage().getText());
             databaseManager.updateRegistrationStep(user.getUserId(), 5);
             return new EditMessageContainer(update,
-                    "Вы зарегистрировались",
+                    "You have registered",
                     createEmptyKeyboard());
         }
         return null;

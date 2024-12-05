@@ -9,6 +9,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DatabaseManager {
     private String URL;
@@ -16,6 +18,7 @@ public class DatabaseManager {
     private String PASSWORD;
 
     private Connection connection;
+    private static final Logger logger = Logger.getLogger(DatabaseManager.class.getName());
 
     public DatabaseManager() {
         loadConfig();
@@ -29,16 +32,18 @@ public class DatabaseManager {
             URL = properties.getProperty("db.url");
             USER = properties.getProperty("db.user");
             PASSWORD = properties.getProperty("db.password");
+            logger.info("Database configuration loaded successfully.");
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error loading database configuration", e);
         }
     }
 
     public void connectToDatabase() {
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
+            logger.info("Successfully connected to the database.");
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error connecting to the database", e);
         }
     }
 
@@ -49,7 +54,6 @@ public class DatabaseManager {
     public DatabaseManager(Connection connection) {
         this.connection = connection;
     }
-
 
     public void addUser(User user) {
         String insertUserSQL = "INSERT INTO public.users (user_id, user_name, language, is_vegan, is_vegetarian, has_allergies, allergies, registration_step) " +
@@ -65,8 +69,9 @@ public class DatabaseManager {
             statement.setString(7, user.getAllergies());
             statement.setInt(8, user.getRegistrationStep());
             statement.executeUpdate();
+            logger.info("User added/updated successfully: " + user.getUserId());
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error adding/updating user", e);
         }
     }
 
@@ -77,10 +82,12 @@ public class DatabaseManager {
             statement.setLong(1, userId);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                return resultSet.getInt("registration_step");
+                int step = resultSet.getInt("registration_step");
+                logger.info("Retrieved registration step for user: " + userId + " - Step: " + step);
+                return step;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error retrieving registration step for user: " + userId, e);
         }
         return 0;
     }
@@ -92,8 +99,9 @@ public class DatabaseManager {
             statement.setInt(1, step);
             statement.setLong(2, userId);
             statement.executeUpdate();
+            logger.info("Updated registration step for user: " + userId + " - New Step: " + step);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error updating registration step for user: " + userId, e);
         }
     }
 
@@ -104,8 +112,9 @@ public class DatabaseManager {
             statement.setString(1, language);
             statement.setLong(2, userId);
             statement.executeUpdate();
+            logger.info("Updated language for user: " + userId + " - New Language: " + language);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error updating language for user: " + userId, e);
         }
     }
 
@@ -116,8 +125,9 @@ public class DatabaseManager {
             statement.setBoolean(1, ans);
             statement.setLong(2, userId);
             statement.executeUpdate();
+            logger.info("Updated vegan status for user: " + userId + " - Is Vegan: " + ans);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error updating vegan status for user: " + userId, e);
         }
     }
 
@@ -128,8 +138,9 @@ public class DatabaseManager {
             statement.setBoolean(1, ans);
             statement.setLong(2, userId);
             statement.executeUpdate();
+            logger.info("Updated vegetarian status for user: " + userId + " - Is Vegetarian: " + ans);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error updating vegetarian status for user: " + userId, e);
         }
     }
 
@@ -140,8 +151,9 @@ public class DatabaseManager {
             statement.setBoolean(1, ans);
             statement.setLong(2, userId);
             statement.executeUpdate();
+            logger.info("Updated allergy status for user: " + userId + " - Has Allergies: " + ans);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error updating allergy status for user: " + userId, e);
         }
     }
 
@@ -152,8 +164,9 @@ public class DatabaseManager {
             statement.setString(1, allergies);
             statement.setLong(2, userId);
             statement.executeUpdate();
+            logger.info("Updated allergies for user: " + userId + " - Allergies: " + allergies);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error updating allergies for user: " + userId, e);
         }
     }
 
@@ -164,10 +177,12 @@ public class DatabaseManager {
             statement.setLong(1, userId);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                return resultSet.getBoolean("has_allergies");
+                Boolean hasAllergies = resultSet.getBoolean("has_allergies");
+                logger.info("Retrieved allergy status for user: " + userId + " - Has Allergies: " + hasAllergies);
+                return hasAllergies;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error retrieving allergy status for user: " + userId, e);
         }
         return false;
     }
@@ -179,10 +194,12 @@ public class DatabaseManager {
             statement.setLong(1, userId);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                return resultSet.getString("allergies");
+                String allergies = resultSet.getString("allergies");
+                logger.info("Retrieved allergies for user: " + userId + " - Allergies: " + allergies);
+                return allergies;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error retrieving allergies for user: " + userId, e);
         }
         return "";
     }
@@ -194,10 +211,12 @@ public class DatabaseManager {
             statement.setLong(1, userId);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                return resultSet.getBoolean("is_vegan");
+                Boolean isVegan = resultSet.getBoolean("is_vegan");
+                logger.info("Retrieved vegan status for user: " + userId + " - Is Vegan: " + isVegan);
+                return isVegan;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error retrieving vegan status for user: " + userId, e);
         }
         return false;
     }
@@ -209,10 +228,12 @@ public class DatabaseManager {
             statement.setLong(1, userId);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                return resultSet.getBoolean("is_vegetarian");
+                Boolean isVegetarian = resultSet.getBoolean("is_vegetarian");
+                logger.info("Retrieved vegetarian status for user: " + userId + " - Is Vegetarian: " + isVegetarian);
+                return isVegetarian;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error retrieving vegetarian status for user: " + userId, e);
         }
         return false;
     }

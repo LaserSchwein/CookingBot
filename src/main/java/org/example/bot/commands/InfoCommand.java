@@ -8,7 +8,7 @@ public class InfoCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Информация о боте";
+        return "Information about the bot";
     }
 
     @Override
@@ -19,7 +19,7 @@ public class InfoCommand implements Command {
         } else {
             message.setChatId(update.getMessage().getChatId().toString());
         }
-        message.setText("Это универсальный бот, который поможет вам выбрать блюдо, написать рецепт из имеющихся у вас ингредиентов и многое другое.");
+        message.setText("This is a universal bot that will help you choose a dish, write a recipe from the ingredients you have, and much more.");
 
         return message;
     }
