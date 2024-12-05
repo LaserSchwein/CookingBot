@@ -8,7 +8,7 @@ public class AuthorsCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Авторы";
+        return "Authors";
     }
 
     @Override
@@ -20,7 +20,7 @@ public class AuthorsCommand implements Command {
             message.setChatId(update.getMessage().getChatId().toString());
         }
 
-        message.setText("Авторы: @sobol_eg, @ZAntoshkAZ, @polska_stronker");
+        message.setText("Authors: @sobol_eg, @ZAntoshkAZ, @polska_stronker");
 
         return message;
     }

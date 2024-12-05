@@ -31,7 +31,7 @@ public class RecipesCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Подобрать рецепты на основе ваших предпочтений.";
+        return "Select recipes based on your preferences.";
     }
 
     @Override
@@ -64,7 +64,7 @@ public class RecipesCommand implements Command {
     public SendMessage askForIngredients(long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText("Пожалуйста, укажите ингредиенты, которые у вас есть, через запятую. Например:\nпомидоры, сыр, курица");
+        message.setText("Please list the ingredients you have, separated by commas. For example:\ntomatoes, cheese, chicken");
         logger.info("Asking for ingredients from user with chatId: " + chatId);
         return message;
     }
@@ -97,14 +97,14 @@ public class RecipesCommand implements Command {
             List<Integer> recipeIds = parseRecipeIds(response);
 
             if (recipeTitles.isEmpty()) {
-                message.setText("К сожалению, мы не нашли рецептов, которые соответствуют вашим предпочтениям.");
+                message.setText("Unfortunately, we did not find any recipes that match your preferences.");
             } else {
-                message.setText("Вот рецепты, которые можно приготовить из указанных ингредиентов:\n" + String.join("\n", recipeTitles));
+                message.setText("Here are some recipes that can be made using the ingredients listed:\n" + String.join("\n", recipeTitles));
                 message.setReplyMarkup(createRecipeSelectionKeyboard(recipeTitles, recipeIds));
             }
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Error fetching recipes", e);
-            message.setText("Произошла ошибка при запросе рецептов. Попробуйте позже.");
+            message.setText("There was an error requesting recipes. Please try again later.");
         }
 
         return message;
@@ -183,7 +183,7 @@ public class RecipesCommand implements Command {
             String response = spoonacularAPI.getRecipeInformation(recipeId);
             String instructions = parseRecipeInstructions(response);
 
-            text = "Пошаговая инструкция для приготовления:\n" + instructions;
+            text = "Step by step instructions for cooking:\n" + instructions;
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Error fetching recipe instructions", e);
             text = "Произошла ошибка при получении инструкции по приготовлению рецепта. Попробуйте позже.";

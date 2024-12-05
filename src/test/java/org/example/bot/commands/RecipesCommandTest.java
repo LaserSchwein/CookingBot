@@ -26,7 +26,7 @@ public class RecipesCommandTest {
 
     @Test
     public void testGetDescription() {
-        assertEquals("Подобрать рецепты на основе ваших предпочтений.", recipesCommand.getDescription());
+        assertEquals("Select recipes based on your preferences.", recipesCommand.getDescription());
     }
 
     @Test
@@ -37,7 +37,7 @@ public class RecipesCommandTest {
     @Test
     public void testAskForIngredients() {
         SendMessage message = recipesCommand.askForIngredients(12345);
-        assertEquals("Пожалуйста, укажите ингредиенты, которые у вас есть, через запятую. Например:\nпомидоры, сыр, курица", message.getText());
+        assertEquals("Please list the ingredients you have, separated by commas. For example:\ntomatoes, cheese, chicken", message.getText());
     }
 
     @Test

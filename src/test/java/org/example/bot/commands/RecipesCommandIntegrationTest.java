@@ -34,7 +34,7 @@ public class RecipesCommandIntegrationTest {
         Mockito.when(message.getText()).thenReturn("/recipes");
 
         SendMessage sendMessage = recipesCommand.getContent(update);
-        assertEquals("Пожалуйста, укажите ингредиенты, которые у вас есть, через запятую. Например:\nпомидоры, сыр, курица", sendMessage.getText());
+        assertEquals("Please list the ingredients you have, separated by commas. For example:\ntomatoes, cheese, chicken", sendMessage.getText());
     }
 
     @Test
@@ -70,7 +70,7 @@ public class RecipesCommandIntegrationTest {
         recipesCommand.getContent(update);
 
         SendMessage sendMessage = recipesCommand.getContent(update);
-        assertEquals("Вот рецепты, которые можно приготовить из указанных ингредиентов:\nRecipe 1\nRecipe 2", sendMessage.getText());
+        assertEquals("Here are some recipes that can be made using the ingredients listed:\nRecipe 1\nRecipe 2", sendMessage.getText());
     }
 
     @Test
@@ -99,6 +99,6 @@ public class RecipesCommandIntegrationTest {
         recipesCommand.getContent(update);
 
         SendMessage sendMessage = recipesCommand.getContent(update);
-        assertEquals("К сожалению, мы не нашли рецептов, которые соответствуют вашим предпочтениям.", sendMessage.getText());
+        assertEquals("Unfortunately, we did not find any recipes that match your preferences.", sendMessage.getText());
     }
 }
