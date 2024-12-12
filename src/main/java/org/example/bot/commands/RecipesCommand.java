@@ -1,7 +1,10 @@
 package org.example.bot.commands;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import okhttp3.OkHttpClient;
 import org.example.bot.EditMessageContainer;
 import org.example.bot.api.SpoonacularAPI;
+import org.example.bot.api.TranslateService;
 import org.example.bot.database.DatabaseManager;
 import org.example.bot.database.User;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -23,10 +26,13 @@ public class RecipesCommand implements Command {
     private final DatabaseManager databaseManager;
     private boolean waitingForIngredients = false;
     private static final Logger logger = Logger.getLogger(RecipesCommand.class.getName());
+    private final TranslateService translateService;
 
     public RecipesCommand(SpoonacularAPI api, DatabaseManager dbManager) {
         this.spoonacularAPI = api;
         this.databaseManager = dbManager;
+        OkHttpClient okHttpClient = new OkHttpClient();
+        this.translateService = new TranslateService(okHttpClient, databaseManager);
     }
 
     @Override
@@ -64,7 +70,7 @@ public class RecipesCommand implements Command {
     public SendMessage askForIngredients(long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText("Please list the ingredients you have, separated by commas. For example:\ntomatoes, cheese, chicken");
+        message.setText(translateService.translateFromEnglish("Please list the ingredients you have, separated by commas. For example:\ntomatoes, cheese, chicken", chatId));
         logger.info("Asking for ingredients from user with chatId: " + chatId);
         return message;
     }
@@ -92,25 +98,25 @@ public class RecipesCommand implements Command {
                 intolerances = user.getAllergies();
             }
 
-            String response = spoonacularAPI.searchRecipes(ingredientsInput, diet, intolerances);
+            String response = spoonacularAPI.searchRecipes(translateService.translateToEnglish(ingredientsInput, user.getUserId()), diet, intolerances);
             List<String> recipeTitles = parseRecipeTitles(response);
             List<Integer> recipeIds = parseRecipeIds(response);
 
             if (recipeTitles.isEmpty()) {
-                message.setText("Unfortunately, we did not find any recipes that match your preferences.");
+                message.setText(translateService.translateFromEnglish("Unfortunately, we did not find any recipes that match your preferences.", chatId));
             } else {
-                message.setText("Here are some recipes that can be made using the ingredients listed:\n" + String.join("\n", recipeTitles));
-                message.setReplyMarkup(createRecipeSelectionKeyboard(recipeTitles, recipeIds));
+                message.setText(translateService.translateFromEnglish("Here are some recipes that can be made using the ingredients listed:\n" + String.join("\n", recipeTitles), chatId));
+                message.setReplyMarkup(createRecipeSelectionKeyboard(recipeTitles, recipeIds, chatId));
             }
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Error fetching recipes", e);
-            message.setText("There was an error requesting recipes. Please try again later.");
+            message.setText(translateService.translateFromEnglish("There was an error requesting recipes. Please try again later.", chatId));
         }
 
         return message;
     }
 
-    public List<Integer> parseRecipeIds(String jsonResponse) throws IOException {
+    public List<Integer> parseRecipeIds(String jsonResponse) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode rootNode = objectMapper.readTree(jsonResponse);
         List<Integer> recipeIds = new ArrayList<>();
@@ -157,7 +163,7 @@ public class RecipesCommand implements Command {
         return recipeTitles;
     }
 
-    public InlineKeyboardMarkup createRecipeSelectionKeyboard(List<String> recipeTitles, List<Integer> recipeIds) {
+    public InlineKeyboardMarkup createRecipeSelectionKeyboard(List<String> recipeTitles, List<Integer> recipeIds, Long  chatId) throws Exception {
         if (recipeTitles.isEmpty() || recipeIds.isEmpty()) {
             return null;
         }
@@ -167,7 +173,7 @@ public class RecipesCommand implements Command {
 
         for (int i = 0; i < recipeTitles.size(); i++) {
             InlineKeyboardButton button = new InlineKeyboardButton();
-            button.setText(recipeTitles.get(i));
+            button.setText(translateService.translateFromEnglish(recipeTitles.get(i), chatId));
             button.setCallbackData("recipe_" + recipeIds.get(i));
             rows.add(List.of(button));
         }
@@ -176,7 +182,7 @@ public class RecipesCommand implements Command {
         return inlineKeyboardMarkup;
     }
 
-    public EditMessageContainer getRecipeInstructions(Update update, int recipeId) {
+    public EditMessageContainer getRecipeInstructions(Update update, int recipeId) throws Exception {
         String text;
 
         try {
@@ -186,12 +192,13 @@ public class RecipesCommand implements Command {
             text = "Step by step instructions for cooking:\n" + instructions;
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Error fetching recipe instructions", e);
-            text = "Произошла ошибка при получении инструкции по приготовлению рецепта. Попробуйте позже.";
+            text = "An error occurred while receiving instructions for preparing the recipe. Try again later.";
         }
 
         return new EditMessageContainer(update,
                 text,
-                createEmptyKeyboard());
+                createEmptyKeyboard(),
+                databaseManager);
     }
 
     private String parseRecipeInstructions(String jsonResponse) throws IOException {

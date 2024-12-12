@@ -1,5 +1,8 @@
 package org.example.bot;
 
+import okhttp3.OkHttpClient;
+import org.example.bot.api.TranslateService;
+import org.example.bot.database.DatabaseManager;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -8,8 +11,11 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 public class EditMessageContainer {
     private final EditMessageText editMessageText;
     private final EditMessageReplyMarkup editMessageReplyMarkup;
+    private final TranslateService translateService;
 
-    public EditMessageContainer(Update update, String text, InlineKeyboardMarkup markup) {
+    public EditMessageContainer(Update update, String text, InlineKeyboardMarkup markup, DatabaseManager databaseManager) {
+        OkHttpClient okHttpClient = new OkHttpClient();
+        this.translateService = new TranslateService(okHttpClient, databaseManager);
         this.editMessageText = crateEditMessageText(update, text);
         this.editMessageReplyMarkup = crateEditMessageReplyMarkup(update, markup);
     }
@@ -22,18 +28,21 @@ public class EditMessageContainer {
         return editMessageReplyMarkup.getReplyMarkup();
     }
 
-    public EditMessageText crateEditMessageText(Update update, String question) {
+    public EditMessageText crateEditMessageText(Update update, String text) {
         EditMessageText editMessageText = new EditMessageText();
 
-        if (update.hasMessage() && update.getMessage().hasText()){
-            editMessageText.setChatId(update.getMessage().getChatId().toString());
-            editMessageText.setMessageId(update.getMessage().getMessageId());
-        } else {
-            editMessageText.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+        Long chatId;
+
+        if (update.getMessage() == null) {
+            chatId = update.getCallbackQuery().getMessage().getChatId();
             editMessageText.setMessageId(update.getCallbackQuery().getMessage().getMessageId());
+        } else {
+            chatId = update.getMessage().getChatId();
+            editMessageText.setMessageId(update.getMessage().getMessageId());
         }
 
-        editMessageText.setText(question);
+        editMessageText.setChatId(chatId);
+        editMessageText.setText(translateService.translateFromEnglish(text, chatId));
 
         return editMessageText;
     }

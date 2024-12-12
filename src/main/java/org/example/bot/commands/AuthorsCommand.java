@@ -1,26 +1,35 @@
 package org.example.bot.commands;
 
+import okhttp3.OkHttpClient;
+import org.example.bot.database.DatabaseManager;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.example.bot.api.TranslateService;
 
 public class AuthorsCommand implements Command {
+    private final TranslateService translateService;
 
-    @Override
-    public String getDescription() {
-        return "Authors";
+    public AuthorsCommand(DatabaseManager databaseManager) {
+        OkHttpClient okHttpClient = new OkHttpClient();
+        this.translateService = new TranslateService(okHttpClient, databaseManager);
     }
 
     @Override
-    public SendMessage getContent(Update update) {
+    public String getDescription() {return "Authors";}
+
+    @Override
+    public SendMessage getContent(Update update){
         SendMessage message = new SendMessage();
+        Long chatId;
+
         if (update.getMessage() == null) {
-            message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+            chatId = update.getCallbackQuery().getMessage().getChatId();
         } else {
-            message.setChatId(update.getMessage().getChatId().toString());
+            chatId = update.getMessage().getChatId();
         }
 
-        message.setText("Authors: @sobol_eg, @ZAntoshkAZ, @polska_stronker");
+        message.setChatId(chatId);
+        message.setText(translateService.translateFromEnglish("Authors: @sobol_eg, @ZAntoshkAZ, @polska_stronker", chatId));
 
         return message;
     }
@@ -28,10 +37,5 @@ public class AuthorsCommand implements Command {
     @Override
     public String getCommand() {
         return "/authors";
-    }
-
-    @Override
-    public InlineKeyboardMarkup createHelpBackButtonKeyboard() {
-        return Command.super.createHelpBackButtonKeyboard();
     }
 }
