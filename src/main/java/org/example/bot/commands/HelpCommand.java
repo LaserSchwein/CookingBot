@@ -1,6 +1,9 @@
 package org.example.bot.commands;
 
+import okhttp3.OkHttpClient;
 import org.example.bot.TelegramBot;
+import org.example.bot.api.TranslateService;
+import org.example.bot.database.DatabaseManager;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -15,26 +18,35 @@ import java.util.Map;
 import java.util.Set;
 
 public class HelpCommand implements Command {
-
     private InlineKeyboardMarkup cachedInlineKeyboard; // Кэш для inline клавиатуры
+    private final TranslateService translateService;
 
+    public HelpCommand(DatabaseManager databaseManager) {
+        OkHttpClient okHttpClient = new OkHttpClient();
+        this.translateService = new TranslateService(okHttpClient, databaseManager);
+    }
     @Override
     public String getDescription() {
         return "List of commands";
     }
 
     @Override
-    public SendMessage getContent(Update update) {
+    public SendMessage getContent(Update update){
         SendMessage message = new SendMessage();
+        Long chatId;
+
         if (update.getMessage() == null) {
-            message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+            chatId = update.getCallbackQuery().getMessage().getChatId();
         } else {
-            message.setChatId(update.getMessage().getChatId().toString());
+            chatId = update.getMessage().getChatId();
         }
+
+        message.setChatId(chatId);
+
         StringBuilder helpMessage = new StringBuilder("Available commands:\n");
         for (Map.Entry<String, Command> entry : TelegramBot.getCommandMap().entrySet()) {
             if (!entry.getKey().equals("/help") && !entry.getKey().equals("/start")) {
-                helpMessage.append(entry.getKey()).append(" - ").append(entry.getValue().getDescription()).append("\n");
+                helpMessage.append(entry.getKey()).append(" - ").append(translateService.translateFromEnglish(entry.getValue().getDescription(), chatId)).append("\n");
             }
         }
 

@@ -1,8 +1,8 @@
 package org.example.bot.database;
 
 public class User {
-    private long userId;
-    private String userName;
+    private final long userId;
+    private final String userName;
     private String language;
     private boolean isVegan;
     private boolean isVegetarian;

@@ -21,6 +21,7 @@ public class DatabaseManager {
     private static final Logger logger = Logger.getLogger(DatabaseManager.class.getName());
 
     public DatabaseManager() {
+        System.out.println("База данных успешно подключена!");
         loadConfig();
         connectToDatabase();
     }
@@ -236,5 +237,22 @@ public class DatabaseManager {
             logger.log(Level.SEVERE, "Error retrieving vegetarian status for user: " + userId, e);
         }
         return false;
+    }
+
+    public String getLanguage(long userId) {
+        String selectStepSQL = "SELECT language FROM public.users WHERE user_id = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(selectStepSQL)) {
+            statement.setLong(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                String language = resultSet.getString("language");
+                logger.info("Retrieved language for user: " + userId);
+                return language;
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error retrieving language for user: " + userId, e);
+        }
+        return "";
     }
 }

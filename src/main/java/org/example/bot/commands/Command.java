@@ -17,7 +17,7 @@ public interface Command {
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
 
         InlineKeyboardButton backButton = new InlineKeyboardButton();
-        backButton.setText("⬅️ Назад");
+        backButton.setText("⬅️");
         backButton.setCallbackData("/help");
         keyboard.add(List.of(backButton));
 

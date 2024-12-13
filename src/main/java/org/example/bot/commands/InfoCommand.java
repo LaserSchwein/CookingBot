@@ -1,25 +1,37 @@
 package org.example.bot.commands;
 
+import okhttp3.OkHttpClient;
+import org.example.bot.api.TranslateService;
+import org.example.bot.database.DatabaseManager;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
 public class InfoCommand implements Command {
+    private final TranslateService translateService;
 
-    @Override
-    public String getDescription() {
-        return "Information about the bot";
+    public InfoCommand(DatabaseManager databaseManager) {
+        OkHttpClient okHttpClient = new OkHttpClient();
+        this.translateService = new TranslateService(okHttpClient, databaseManager);
     }
 
     @Override
-    public SendMessage getContent(Update update) {
+    public String getDescription() {
+        return "Information about bot.";
+    }
+
+    @Override
+    public SendMessage getContent(Update update){
         SendMessage message = new SendMessage();
+        Long chatId;
+
         if (update.getMessage() == null) {
-            message.setChatId(update.getCallbackQuery().getMessage().getChatId().toString());
+            chatId = update.getCallbackQuery().getMessage().getChatId();
         } else {
-            message.setChatId(update.getMessage().getChatId().toString());
+            chatId = update.getMessage().getChatId();
         }
-        message.setText("This is a universal bot that will help you choose a dish, write a recipe from the ingredients you have, and much more.");
+
+        message.setChatId(chatId);
+        message.setText(translateService.translateFromEnglish("This is a universal bot that will help you choose a dish, write a recipe from the ingredients you have, and much more.", chatId));
 
         return message;
     }
@@ -27,10 +39,5 @@ public class InfoCommand implements Command {
     @Override
     public String getCommand() {
         return "/info";
-    }
-
-    @Override
-    public InlineKeyboardMarkup createHelpBackButtonKeyboard() {
-        return Command.super.createHelpBackButtonKeyboard();
     }
 }

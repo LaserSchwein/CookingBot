@@ -1,6 +1,8 @@
 package org.example.bot.commands;
 
+import okhttp3.OkHttpClient;
 import org.example.bot.EditMessageContainer;
+import org.example.bot.api.TranslateService;
 import org.example.bot.database.DatabaseManager;
 import org.example.bot.database.User;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -14,11 +16,14 @@ import java.util.List;
 
 public class RegisterCommand implements Command {
     private final DatabaseManager databaseManager;
+    private final TranslateService translateService;
     private User user;
     private int step = 0;
 
     public RegisterCommand(DatabaseManager databaseManager) {
         this.databaseManager = databaseManager;
+        OkHttpClient okHttpClient = new OkHttpClient();
+        this.translateService = new TranslateService(okHttpClient, databaseManager);
     }
 
     @Override
@@ -38,19 +43,7 @@ public class RegisterCommand implements Command {
 
     @Override
     public SendMessage getContent(Update update) {
-        long userId;
-        String userName;
 
-        if (update.hasMessage() && update.getMessage().hasText()){
-            userId = update.getMessage().getFrom().getId();
-            userName = update.getMessage().getFrom().getUserName();
-        } else {
-            userId = update.getCallbackQuery().getFrom().getId();
-            userName = update.getCallbackQuery().getFrom().getUserName();
-        }
-
-        user = new User(userId, userName);
-        registerUser(user);
 
         return askVeganQuestion(update);
     }
@@ -59,23 +52,26 @@ public class RegisterCommand implements Command {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(createPut("Да", "vegan_yes"));
-        row.add(createPut("Нет", "vegan_no"));
+        row.add(createPut("✅", "vegan_yes"));
+        row.add(createPut("❎", "vegan_no"));
         rows.add(row);
         markup.setKeyboard(rows);
 
         SendMessage message = new SendMessage();
 
+        long chatId;
         if (update.hasMessage() && update.getMessage().hasText()) {
-            message.setChatId(update.getMessage().getChatId());
+            chatId = update.getMessage().getChatId();
         } else {
-            message.setChatId(update.getCallbackQuery().getMessage().getChatId());
+            chatId = update.getCallbackQuery().getMessage().getChatId();
         }
 
+        message.setChatId(chatId);
         message.setText("Are you vegan?");
         message.setReplyMarkup(markup);
 
         step = 1;
+        this.user = new User(chatId, "");
         databaseManager.updateRegistrationStep(user.getUserId(), step);
 
         return message;
@@ -85,8 +81,8 @@ public class RegisterCommand implements Command {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(createPut("Yes", "vegan_yes"));
-        row.add(createPut("No", "vegan_no"));
+        row.add(createPut("✅", "vegan_yes"));
+        row.add(createPut("❎", "vegan_no"));
         rows.add(row);
 
         markup.setKeyboard(rows);
@@ -94,22 +90,7 @@ public class RegisterCommand implements Command {
         return markup;
     }
 
-    public EditMessageContainer registration(Update update){
-        if (user == null) {
-            long userId;
-            String userName;
-
-            if (update.hasMessage() && update.getMessage().hasText()) {
-                userId = update.getMessage().getFrom().getId();
-                userName = update.getMessage().getFrom().getUserName();
-            } else {
-                userId = update.getCallbackQuery().getFrom().getId();
-                userName = update.getCallbackQuery().getFrom().getUserName();
-            }
-
-            user = new User(userId, userName);
-        }
-
+    public EditMessageContainer registration(Update update) {
 
         if (update.hasMessage() && update.getMessage().hasText()) {
             step = databaseManager.getRegistrationStep(update.getMessage().getChatId());
@@ -127,12 +108,12 @@ public class RegisterCommand implements Command {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> firstRow = new ArrayList<>();
-        firstRow.add(createPut("Yes", "vegetarian_yes"));
-        firstRow.add(createPut("No", "vegetarian_no"));
+        firstRow.add(createPut("✅", "vegetarian_yes"));
+        firstRow.add(createPut("❎", "vegetarian_no"));
         rows.add(firstRow);
 
         List<InlineKeyboardButton> secondRow = new ArrayList<>();
-        secondRow.add(createPut("⬅️ Назад", "back"));
+        secondRow.add(createPut("⬅️", "back"));
         rows.add(secondRow);
 
         markup.setKeyboard(rows);
@@ -142,19 +123,20 @@ public class RegisterCommand implements Command {
 
         return new EditMessageContainer(update,
                 "Are you a vegetarian?",
-                markup);
+                markup,
+                databaseManager);
     }
 
     private EditMessageContainer askAllergiesQuestion(Update update) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> firstRow = new ArrayList<>();
-        firstRow.add(createPut("Yes", "allergies_yes"));
-        firstRow.add(createPut("No", "allergies_no"));
+        firstRow.add(createPut("✅", "allergies_yes"));
+        firstRow.add(createPut("❎", "allergies_no"));
         rows.add(firstRow);
 
         List<InlineKeyboardButton> secondRow = new ArrayList<>();
-        secondRow.add(createPut("⬅️ Назад", "back"));
+        secondRow.add(createPut("⬅️", "back"));
         rows.add(secondRow);
 
         markup.setKeyboard(rows);
@@ -164,14 +146,15 @@ public class RegisterCommand implements Command {
 
         return new EditMessageContainer(update,
                 "Do you have any allergies?",
-                markup);
+                markup,
+                databaseManager);
     }
 
     private EditMessageContainer askAllergiesDetailsQuestion(Update update) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(createPut("⬅️ Назад", "back"));
+        row.add(createPut("⬅️", "back"));
         rows.add(row);
 
         markup.setKeyboard(rows);
@@ -181,7 +164,8 @@ public class RegisterCommand implements Command {
 
         return new EditMessageContainer(update,
                 "What allergies do you have?",
-                markup);
+                markup,
+                databaseManager);
     }
 
     public EditMessageContainer handleCallbackQuery(CallbackQuery callbackQuery, Update update, int step) {
@@ -200,7 +184,8 @@ public class RegisterCommand implements Command {
 
             return new EditMessageContainer(update,
                     "Are you vegan?",
-                    first_Keyboard());
+                    first_Keyboard(),
+                    databaseManager);
         } else if (step == 1) {
             databaseManager.updateVegan(user.getUserId(), data.equals("vegan_yes"));
             return askVegetarianQuestion(update);
@@ -214,21 +199,20 @@ public class RegisterCommand implements Command {
             } else {
                 return new EditMessageContainer(update,
                         "You have registered",
-                        createEmptyKeyboard());
+                        createEmptyKeyboard(),
+                        databaseManager);
             }
         } else if (step == 4) {
-            databaseManager.updateAllergies(user.getUserId(), update.getMessage().getText());
+            databaseManager.updateAllergies(user.getUserId(), translateService.translateToEnglish(update.getMessage().getText(), update.getMessage().getChatId()));
             databaseManager.updateRegistrationStep(user.getUserId(), 5);
             return new EditMessageContainer(update,
                     "You have registered",
-                    createEmptyKeyboard());
+                    createEmptyKeyboard(),
+                    databaseManager);
         }
         return null;
     }
 
-    public void registerUser(User user) {
-        databaseManager.addUser(user);
-    }
 
     private InlineKeyboardButton createPut(String text, String data) {
         InlineKeyboardButton put = new InlineKeyboardButton();
