@@ -1,10 +1,12 @@
 package org.example.bot.commands;
 
-import org.example.bot.api.SpoonacularAPI;
+import okhttp3.OkHttpClient;
+import org.example.bot.api.*;
 import org.example.bot.database.DatabaseManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.*;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 import java.io.IOException;
@@ -36,9 +38,25 @@ public class RecipesCommandTest {
 
     @Test
     public void testAskForIngredients() {
-        SendMessage message = recipesCommand.askForIngredients(12345);
-        assertEquals("Please list the ingredients you have, separated by commas. For example:\ntomatoes, cheese, chicken", message.getText());
+        // Устанавливаем mock данные
+        long chatId = 12345L;
+        when(databaseManager.getLanguage(chatId)).thenReturn("ru");
+
+        // Create a spy of TranslateService
+        TranslateService translateServiceSpy = spy(new TranslateService(new OkHttpClient(), databaseManager));
+        RecipesCommand recipesCommandSpy = new RecipesCommand(spoonacularAPI, databaseManager);
+
+        // Mock the translateService to return the expected descriptions
+        doReturn("Пожалуйста, перечислите ингредиенты, которые у вас есть, через запятую. Например:помидоры, сыр, курица").when(translateServiceSpy).translateFromEnglish(anyString(), eq(chatId));
+
+        // Вызываем метод и получаем результат
+        SendMessage sendMessage = recipesCommandSpy.askForIngredients(chatId);
+
+        // Проверяем результат
+        assertEquals("Пожалуйста, перечислите ингредиенты, которые у вас есть, через запятую. Например:\nпомидоры, сыр, курица", sendMessage.getText(), "Текст сообщения должен соответствовать ожидаемому");
+        assertEquals(String.valueOf(chatId), sendMessage.getChatId(), "Chat ID должен соответствовать ожидаемому");
     }
+
 
     @Test
     public void testParseRecipeTitles() throws IOException {

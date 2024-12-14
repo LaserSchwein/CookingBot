@@ -17,7 +17,7 @@ import java.util.List;
 public class RegisterCommand implements Command {
     private final DatabaseManager databaseManager;
     private final TranslateService translateService;
-    private User user;
+    User user;
     private int step = 0;
 
     public RegisterCommand(DatabaseManager databaseManager) {
@@ -43,8 +43,6 @@ public class RegisterCommand implements Command {
 
     @Override
     public SendMessage getContent(Update update) {
-
-
         return askVeganQuestion(update);
     }
 
@@ -67,7 +65,7 @@ public class RegisterCommand implements Command {
         }
 
         message.setChatId(chatId);
-        message.setText("Are you vegan?");
+        message.setText(translateService.translateFromEnglish("Are you vegan?", chatId));
         message.setReplyMarkup(markup);
 
         step = 1;

@@ -70,7 +70,9 @@ public class RecipesCommand implements Command {
     public SendMessage askForIngredients(long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText(translateService.translateFromEnglish("Please list the ingredients you have, separated by commas. For example:\ntomatoes, cheese, chicken", chatId));
+        String text1 = translateService.translateFromEnglish("Please list the ingredients you have, separated by commas. For example:", chatId);
+        String text2 = translateService.translateFromEnglish("tomatoes, cheese, chicken", chatId);
+        message.setText(text1 + "\n" + text2);
         logger.info("Asking for ingredients from user with chatId: " + chatId);
         return message;
     }

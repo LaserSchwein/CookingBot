@@ -16,7 +16,7 @@ public class InfoCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Information about bot.";
+        return "Information about the bot functionality";
     }
 
     @Override
