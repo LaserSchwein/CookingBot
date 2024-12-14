@@ -1,7 +1,9 @@
 package org.example.bot.commands;
 
+import okhttp3.OkHttpClient;
 import org.example.bot.EditMessageContainer;
 import org.example.bot.TelegramBot;
+import org.example.bot.api.TranslateService;
 import org.example.bot.database.DatabaseManager;
 import org.example.bot.database.User;
 import org.junit.jupiter.api.AfterEach;
@@ -30,11 +32,15 @@ public class RegisterCommandTest {
     private Message message;
     private CallbackQuery callbackQuery;
     private org.telegram.telegrambots.meta.api.objects.User telegramUser;
+    private StartCommand startCommand;
+    private TranslateService translateService;
 
     @BeforeEach
     public void setUp() {
         databaseManager = mock(DatabaseManager.class);
-        registerCommand = new RegisterCommand(databaseManager); // Инициализация с DatabaseManager
+        translateService = spy(new TranslateService(new OkHttpClient(), databaseManager));
+        registerCommand = new RegisterCommand(databaseManager);
+        startCommand = new StartCommand();
         mockedStatic = mockStatic(TelegramBot.class);
         update = mock(Update.class);
         message = mock(Message.class);
@@ -64,9 +70,11 @@ public class RegisterCommandTest {
     }
 
     @Test
-    @DisplayName("Проверка создания сообщения регистрации")
-    public void testGetContent() {
+    @DisplayName("Проверка создания сообщения регистрации при использовании /start")
+    public void testGetContentWithStartCommand() {
+        long chatId = 12345L;
         when(telegramUser.getId()).thenReturn(12345L);
+        when(databaseManager.getLanguage(chatId)).thenReturn("ru");
         when(telegramUser.getUserName()).thenReturn("testuser");
         when(message.getFrom()).thenReturn(telegramUser);
         when(message.getChatId()).thenReturn(12345L);
@@ -74,72 +82,89 @@ public class RegisterCommandTest {
         when(update.hasMessage()).thenReturn(true);
         when(update.getMessage().hasText()).thenReturn(true);
 
-        SendMessage sendMessage = registerCommand.getContent(update);
-        assertEquals("Are you vegan?", sendMessage.getText(), "Сообщение должно быть 'Are you vegan?'");
+        // Use the start command to initiate registration
+        SendMessage sendMessage = startCommand.getContent(update);
+        assertEquals("Welcome to the recipe bot! Use /help for a list of commands.", sendMessage.getText(), "Сообщение должно быть 'Welcome to the recipe bot! Use /help for a list of commands.'");
+
+        // Mock the translation service to return the expected translation
+        doReturn("Вы веган?").when(translateService).translateFromEnglish(anyString(), eq(chatId));
+
+        // Now check the registration message
+        sendMessage = registerCommand.getContent(update);
+        assertEquals("Вы веган?", sendMessage.getText(), "Сообщение должно быть 'Вы веган?'");
     }
 
     @Test
     @DisplayName("Проверка обработки callback-запросов для вопроса о веганах")
     public void testRegistrationCallbackHandlingVegan() {
-        when(telegramUser.getId()).thenReturn(12345L);
+        long chatId = 12345L;
+        when(telegramUser.getId()).thenReturn(chatId);
         when(telegramUser.getUserName()).thenReturn("testuser");
         when(callbackQuery.getFrom()).thenReturn(telegramUser);
         when(callbackQuery.getMessage()).thenReturn(message);
         when(callbackQuery.getData()).thenReturn("vegan_yes");
-        when(message.getChatId()).thenReturn(12345L);
+        when(message.getChatId()).thenReturn(chatId);
         when(update.getCallbackQuery()).thenReturn(callbackQuery);
+        when(databaseManager.getLanguage(chatId)).thenReturn("ru");
 
         when(databaseManager.getRegistrationStep(anyLong())).thenReturn(1);
 
-        // Инициализация пользователя
-        User user = new User(12345L, "testuser");
-        registerCommand.registerUser(user);
+        doReturn("Вы вегетарианец?").when(translateService).translateFromEnglish(anyString(), eq(chatId));
+
+        // Initialize user
+        registerCommand.user = new User(chatId, "");
 
         EditMessageContainer editMessageContainer = registerCommand.registration(update);
-        assertEquals("Are you a vegetarian?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Are you a vegetarian?'");
+        assertEquals("12. Вы вегетарианец?", editMessageContainer.getEditMessageText(), "Сообщение должно быть '12. Вы вегетарианец?'");
     }
 
     @Test
     @DisplayName("Проверка обработки callback-запросов для вопроса о вегетарианцах")
     public void testRegistrationCallbackHandlingVegetarian() {
-        when(telegramUser.getId()).thenReturn(12345L);
+        long chatId = 12345L;
+        when(telegramUser.getId()).thenReturn(chatId);
         when(telegramUser.getUserName()).thenReturn("testuser");
         when(callbackQuery.getFrom()).thenReturn(telegramUser);
         when(callbackQuery.getMessage()).thenReturn(message);
         when(callbackQuery.getData()).thenReturn("vegetarian_yes");
-        when(message.getChatId()).thenReturn(12345L);
+        when(message.getChatId()).thenReturn(chatId);
         when(update.getCallbackQuery()).thenReturn(callbackQuery);
+        when(databaseManager.getLanguage(chatId)).thenReturn("ru");
 
         when(databaseManager.getRegistrationStep(anyLong())).thenReturn(2);
 
-        // Инициализация пользователя
-        User user = new User(12345L, "testuser");
-        registerCommand.registerUser(user);
+        doReturn("У вас есть аллергии?").when(translateService).translateFromEnglish(anyString(), eq(chatId));
+
+        // Initialize user
+        registerCommand.user = new User(chatId, "");
 
         EditMessageContainer editMessageContainer = registerCommand.registration(update);
-        assertEquals("Do you have any allergies?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Do you have any allergies?'");
+        assertEquals("У вас есть аллергия на что-нибудь?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'У вас есть аллергии?'");
     }
 
     @Test
     @DisplayName("Проверка обработки callback-запросов для вопроса об аллергиях")
     public void testRegistrationCallbackHandlingAllergies() {
-        when(telegramUser.getId()).thenReturn(12345L);
+        long chatId = 12345L;
+        when(telegramUser.getId()).thenReturn(chatId);
         when(telegramUser.getUserName()).thenReturn("testuser");
         when(callbackQuery.getFrom()).thenReturn(telegramUser);
         when(callbackQuery.getMessage()).thenReturn(message);
         when(callbackQuery.getData()).thenReturn("allergies_yes");
-        when(message.getChatId()).thenReturn(12345L);
+        when(message.getChatId()).thenReturn(chatId);
         when(update.getCallbackQuery()).thenReturn(callbackQuery);
         when(databaseManager.hasAllergies(anyLong())).thenReturn(true);
+        when(databaseManager.getLanguage(chatId)).thenReturn("ru");
 
         when(databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId())).thenReturn(3);
 
-        // Инициализация пользователя
-        User user = new User(12345L, "testuser");
-        registerCommand.registerUser(user);
+        doReturn("Какие у вас аллергии?").when(translateService).translateFromEnglish(anyString(), eq(chatId));
+
+        // Initialize user
+        registerCommand.user = new User(chatId, "");
 
         EditMessageContainer editMessageContainer = registerCommand.registration(update);
-        assertEquals("What allergies do you have?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'What allergies do you have?'");
+        assertEquals("Какая у вас аллергия?", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Какие у вас аллергии?'");
     }
 
     @Test
@@ -152,9 +177,9 @@ public class RegisterCommandTest {
         InlineKeyboardButton yesButton = inlineKeyboard.getKeyboard().get(0).get(0);
         InlineKeyboardButton noButton = inlineKeyboard.getKeyboard().get(0).get(1);
 
-        assertEquals("Yes", yesButton.getText(), "Текст кнопки должен быть 'Yes'");
+        assertEquals("✅", yesButton.getText(), "Текст кнопки должен быть '✅'");
         assertEquals("vegan_yes", yesButton.getCallbackData(), "CallbackData кнопки должен быть 'vegan_yes'");
-        assertEquals("No", noButton.getText(), "Текст кнопки должен быть 'No'");
+        assertEquals("❎", noButton.getText(), "Текст кнопки должен быть '❎'");
         assertEquals("vegan_no", noButton.getCallbackData(), "CallbackData кнопки должен быть 'vegan_no'");
     }
 }

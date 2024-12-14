@@ -1,6 +1,12 @@
 package org.example.bot.commands;
 
+import okhttp3.Call;
+import okhttp3.OkHttpClient;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.example.bot.TelegramBot;
+import org.example.bot.api.TranslateService;
+import org.example.bot.database.DatabaseManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +19,7 @@ import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,10 +33,28 @@ public class HelpCommandTest {
     private Update update;
     private Message message;
     private Chat chat;
+    private DatabaseManager databaseManager;
+    private TranslateService translateService;
+    private OkHttpClient okHttpClient;
+    private Call call;
+    private Response response;
+    private ResponseBody responseBody;
 
     @BeforeEach
-    public void setUp() {
-        helpCommand = new HelpCommand();
+    public void setUp() throws IOException {
+        databaseManager = mock(DatabaseManager.class);
+        okHttpClient = mock(OkHttpClient.class);
+        call = mock(Call.class);
+        response = mock(Response.class);
+        responseBody = mock(ResponseBody.class);
+
+        when(okHttpClient.newCall(any())).thenReturn(call);
+        when(call.execute()).thenReturn(response);
+        when(response.body()).thenReturn(responseBody);
+        when(responseBody.string()).thenReturn("{\"translatedText\": \"Information about the bot\"}");
+
+        translateService = new TranslateService(okHttpClient, databaseManager);
+        helpCommand = new HelpCommand(databaseManager); // Инициализация с DatabaseManager
         commandMap = createCommandMap();
         mockedStatic = mockStatic(TelegramBot.class);
         mockedStatic.when(TelegramBot::getCommandMap).thenReturn(commandMap);
@@ -46,10 +71,11 @@ public class HelpCommandTest {
     private LinkedHashMap<String, Command> createCommandMap() {
         LinkedHashMap<String, Command> commandMap = new LinkedHashMap<>();
         commandMap.put("/start", new StartCommand());
-        commandMap.put("/info", new InfoCommand());
-        commandMap.put("/authors", new AuthorsCommand());
-        commandMap.put("/register", new RegisterCommand(null));
+        commandMap.put("/info", new InfoCommand(databaseManager));
+        commandMap.put("/authors", new AuthorsCommand(databaseManager));
+        commandMap.put("/register", new RegisterCommand(databaseManager));
         commandMap.put("/recipes", new RecipesCommand(null, null)); // Adding RecipesCommand for completeness
+        commandMap.put("/language", new LanguageCommand(databaseManager));
         return commandMap;
     }
 
@@ -65,22 +91,43 @@ public class HelpCommandTest {
     @DisplayName("Проверка текста помощи для команды /help")
     public void testGetContent() {
         // Устанавливаем mock данные
-        when(message.getChatId()).thenReturn(123456L);
+        long chatId = 123456L;
+        when(message.getChatId()).thenReturn(chatId);
         when(update.getMessage()).thenReturn(message);
+        when(databaseManager.getLanguage(chatId)).thenReturn("ru");
 
-        String expectedContent = "Available commands:\n" +
-                "/info - Information about the bot\n" +
-                "/authors - Authors\n" +
-                "/register - Registering an account in the bot\n" +
-                "/recipes - Select recipes based on your preferences.\n";
+        // Create a spy of TranslateService
+        TranslateService translateServiceSpy = spy(translateService);
+        helpCommand = new HelpCommand(databaseManager); // Инициализация с DatabaseManager
+
+        // Mock the translateService to return the expected descriptions
+        doReturn("Information about the bot").when(translateServiceSpy).translateFromEnglish(anyString(), eq(chatId));
+        doReturn("Authors").when(translateServiceSpy).translateFromEnglish(eq("Authors"), eq(chatId));
+        doReturn("Registering an account in the bot").when(translateServiceSpy).translateFromEnglish(eq("Registering an account in the bot"), eq(chatId));
+        doReturn("Select recipes based on your preferences.").when(translateServiceSpy).translateFromEnglish(eq("Select recipes based on your preferences."), eq(chatId));
+
+        // Ожидаемый результат
+        String expectedContent = "Доступные команды:\n" +
+                "/info - Информация о функционале бота\n" +
+                "/authors - Авторы\n" +
+                "/register - Регистрация аккаунта в боте\n" +
+                "/recipes - Выберите рецепты в соответствии с вашими предпочтениями.\n" +
+                "/language - Выберите один из предложенных языков:\n";
 
         // Вызываем метод и получаем результат
         SendMessage sendMessage = helpCommand.getContent(update);
-        String actualContent = sendMessage.getText();
+        assertNotNull(sendMessage, "Ответ сообщения не должен быть null");
 
-        // Проверяем результат
+        String actualContent = sendMessage.getText();
+        assertNotNull(actualContent, "Текст сообщения не должен быть null");
         assertEquals(expectedContent, actualContent, "Контент помощи должен соответствовать ожидаемому");
+
+        // Проверяем наличие клавиатуры
+        assertNotNull(sendMessage.getReplyMarkup(), "Клавиатура должна быть установлена");
+        assertTrue(sendMessage.getReplyMarkup() instanceof InlineKeyboardMarkup, "Клавиатура должна быть типа InlineKeyboardMarkup");
     }
+
+
 
     @Test
     @DisplayName("Проверка команды /help")
@@ -96,20 +143,26 @@ public class HelpCommandTest {
         InlineKeyboardMarkup inlineKeyboard = helpCommand.createInlineCommandsKeyboard();
         assertNotNull(inlineKeyboard, "InlineKeyboardMarkup не должен быть null");
         assertFalse(inlineKeyboard.getKeyboard().isEmpty(), "InlineKeyboard должен содержать кнопки");
+
+        // Проверяем, что кнопки соответствуют ожидаемым
+        assertEquals(5, inlineKeyboard.getKeyboard().size(), "Количество кнопок должно быть 5");
+        assertEquals("/info", inlineKeyboard.getKeyboard().get(0).get(0).getText(), "Первая кнопка должна быть '/info'");
+        assertEquals("/authors", inlineKeyboard.getKeyboard().get(1).get(0).getText(), "Вторая кнопка должна быть '/authors'");
+        assertEquals("/register", inlineKeyboard.getKeyboard().get(2).get(0).getText(), "Третья кнопка должна быть '/register'");
+        assertEquals("/recipes", inlineKeyboard.getKeyboard().get(3).get(0).getText(), "Четвертая кнопка должна быть '/recipes'");
+        assertEquals("/language", inlineKeyboard.getKeyboard().get(4).get(0).getText(), "Пятая кнопка должна быть '/language'");
     }
 
     @Test
-    @DisplayName("Проверка обработки неправильной команды")
-    public void testHandleUnknownCommand() {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setText("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.");
-        sendMessage.setReplyMarkup(helpCommand.getReplyKeyboard());
+    @DisplayName("Проверка создания Reply клавиатуры")
+    public void testGetReplyKeyboard() {
+        ReplyKeyboardMarkup replyKeyboard = helpCommand.getReplyKeyboard();
+        assertNotNull(replyKeyboard, "ReplyKeyboardMarkup не должен быть null");
+        assertFalse(replyKeyboard.getKeyboard().isEmpty(), "ReplyKeyboard должен содержать кнопки");
 
-        assertEquals("Извините, я не понимаю эту команду. Напишите /help для получения списка команд.", sendMessage.getText(), "Текст сообщения должен соответствовать ожидаемому");
-
-        ReplyKeyboardMarkup expectedKeyboard = helpCommand.getReplyKeyboard();
-        ReplyKeyboardMarkup actualKeyboard = (ReplyKeyboardMarkup) sendMessage.getReplyMarkup();
-
-        assertEquals(expectedKeyboard.getKeyboard(), actualKeyboard.getKeyboard(), "Клавиатура должна соответствовать ожидаемой");
+        // Проверяем, что кнопка соответствует ожидаемой
+        assertEquals(1, replyKeyboard.getKeyboard().size(), "Количество строк должно быть 1");
+        assertEquals(1, replyKeyboard.getKeyboard().get(0).size(), "Количество кнопок в строке должно быть 1");
+        assertEquals("/help", replyKeyboard.getKeyboard().get(0).get(0).getText(), "Кнопка должна быть '/help'");
     }
 }

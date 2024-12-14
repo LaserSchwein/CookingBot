@@ -43,7 +43,7 @@ public class HelpCommand implements Command {
 
         message.setChatId(chatId);
 
-        StringBuilder helpMessage = new StringBuilder("Available commands:\n");
+        StringBuilder helpMessage = new StringBuilder(translateService.translateFromEnglish("Available commands:",chatId)).append("\n");
         for (Map.Entry<String, Command> entry : TelegramBot.getCommandMap().entrySet()) {
             if (!entry.getKey().equals("/help") && !entry.getKey().equals("/start")) {
                 helpMessage.append(entry.getKey()).append(" - ").append(translateService.translateFromEnglish(entry.getValue().getDescription(), chatId)).append("\n");

@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public class TranslateService {
     private static final Logger LOGGER = LoggerFactory.getLogger(TranslateService.class);
@@ -24,6 +25,10 @@ public class TranslateService {
     public String translateToEnglish(String text, Long userId) {
         String sourceLang = databaseManager.getLanguage(userId);
         LOGGER.info("Source language for user ID {}: {}", userId, sourceLang);
+
+        if (Objects.equals(sourceLang, "en")) {
+            return text;
+        }
 
         if (sourceLang == null || sourceLang.isEmpty()) {
             LOGGER.error("Source language is not set for user with ID: {}", userId);
@@ -50,6 +55,10 @@ public class TranslateService {
     public String translateFromEnglish(String text, Long userId) {
         String targetLang = databaseManager.getLanguage(userId);
         LOGGER.info("Target language for user ID {}: {}", userId, targetLang);
+
+        if (Objects.equals(targetLang, "en")) {
+            return text;
+        }
 
         if (targetLang == null || targetLang.isEmpty()) {
             LOGGER.error("Target language is not set for user with ID: {}", userId);
