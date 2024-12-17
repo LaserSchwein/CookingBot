@@ -1,5 +1,6 @@
 package org.example.bot.commands;
 
+import org.example.bot.EditMessageContainer;
 import org.example.bot.database.DatabaseManager;
 import org.example.bot.database.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -87,10 +88,12 @@ public class LanguageCommandTest {
         when(message.getChatId()).thenReturn(12345L);
         when(update.getCallbackQuery()).thenReturn(callbackQuery);
         when(update.hasCallbackQuery()).thenReturn(Boolean.TRUE);
+        long userId = 12345L;
+        when(databaseManager.getLanguage(userId)).thenReturn("en");
 
-        SendMessage sendMessage = languageCommand.handleCallback(update);
-        assertNotNull(sendMessage, "SendMessage не должен быть null");
-        assertEquals("Your language has been set to: en", sendMessage.getText(), "Сообщение должно быть 'Your language has been set to: en'");
+        EditMessageContainer editMessageContainer = languageCommand.handleCallback(update);
+        assertNotNull(editMessageContainer, "EditMessageContainer не должен быть null");
+        assertEquals("Your language has been set to: en", editMessageContainer.getEditMessageText(), "Сообщение должно быть 'Your language has been set to: en'");
 
         verify(databaseManager, times(1)).updateLanguage(12345L, "en");
         verify(databaseManager, times(1)).addUser(any(User.class));

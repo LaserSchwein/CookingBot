@@ -8,11 +8,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class TranslateService {
     private static final Logger LOGGER = LoggerFactory.getLogger(TranslateService.class);
     private static final String TRANSLATE_API_URL = "https://api.mymemory.translated.net/get?q=%s&langpair=%s|%s";
+    private static final int MAX_CHARACTERS = 500;
 
     private final OkHttpClient client;
     private final DatabaseManager databaseManager;
@@ -35,21 +38,28 @@ public class TranslateService {
             return "";
         }
 
-        String url = String.format(TRANSLATE_API_URL, text, sourceLang, "en");
-        Request request = new Request.Builder().url(url).build();
+        List<String> textParts = splitTextByWords(text);
+        StringBuilder translatedText = new StringBuilder();
 
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                LOGGER.error("Unexpected code {}", response);
+        for (String part : textParts) {
+            String url = String.format(TRANSLATE_API_URL, part, sourceLang, "en");
+            Request request = new Request.Builder().url(url).build();
+
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    LOGGER.error("Unexpected code {}", response);
+                    return "";
+                }
+
+                assert response.body() != null;
+                translatedText.append(parseResponse(response.body().string()));
+            } catch (IOException e) {
+                LOGGER.error("Error during translation", e);
                 return "";
             }
-
-            assert response.body() != null;
-            return parseResponse(response.body().string());
-        } catch (IOException e) {
-            LOGGER.error("Error during translation", e);
-            return "";
         }
+
+        return translatedText.toString();
     }
 
     public String translateFromEnglish(String text, Long userId) {
@@ -65,21 +75,28 @@ public class TranslateService {
             return "";
         }
 
-        String url = String.format(TRANSLATE_API_URL, text, "en", targetLang);
-        Request request = new Request.Builder().url(url).build();
+        List<String> textParts = splitTextByWords(text);
+        StringBuilder translatedText = new StringBuilder();
 
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                LOGGER.error("Unexpected code {}", response);
+        for (String part : textParts) {
+            String url = String.format(TRANSLATE_API_URL, part, "en", targetLang);
+            Request request = new Request.Builder().url(url).build();
+
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    LOGGER.error("Unexpected code {}", response);
+                    return "";
+                }
+
+                assert response.body() != null;
+                translatedText.append(parseResponse(response.body().string()));
+            } catch (IOException e) {
+                LOGGER.error("Error during translation", e);
                 return "";
             }
-
-            assert response.body() != null;
-            return parseResponse(response.body().string());
-        } catch (IOException e) {
-            LOGGER.error("Error during translation", e);
-            return "";
         }
+
+        return translatedText.toString();
     }
 
     private String parseResponse(String responseBody) {
@@ -90,5 +107,28 @@ public class TranslateService {
             return null;
         }
         return responseData.get("translatedText").getAsString();
+    }
+
+    private List<String> splitTextByWords(String text) {
+        List<String> parts = new ArrayList<>();
+        String[] words = text.split("\\s+");
+        StringBuilder currentPart = new StringBuilder();
+
+        for (String word : words) {
+            if (currentPart.length() + word.length() + 1 > MAX_CHARACTERS) {
+                parts.add(currentPart.toString().trim());
+                currentPart = new StringBuilder();
+            }
+            if (!currentPart.isEmpty()) {
+                currentPart.append(" ");
+            }
+            currentPart.append(word);
+        }
+
+        if (!currentPart.isEmpty()) {
+            parts.add(currentPart.toString().trim());
+        }
+
+        return parts;
     }
 }
