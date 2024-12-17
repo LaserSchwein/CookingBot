@@ -27,6 +27,7 @@ public class RecipesCommand implements Command {
     private boolean waitingForIngredients = false;
     private static final Logger logger = Logger.getLogger(RecipesCommand.class.getName());
     private final TranslateService translateService;
+    private long chatId = 1;
 
     public RecipesCommand(SpoonacularAPI api, DatabaseManager dbManager) {
         this.spoonacularAPI = api;
@@ -49,12 +50,11 @@ public class RecipesCommand implements Command {
     public SendMessage getContent(Update update) {
         String userInput;
 
-        long chatId;
         if (update.hasMessage() && update.getMessage().hasText()) {
-            chatId = update.getMessage().getChatId();
+            this.chatId = update.getMessage().getChatId();
             userInput = update.getMessage().getText();
         } else {
-            chatId = update.getCallbackQuery().getMessage().getChatId();
+            this.chatId = update.getCallbackQuery().getMessage().getChatId();
             userInput = update.getCallbackQuery().getData();
         }
 
@@ -165,7 +165,7 @@ public class RecipesCommand implements Command {
         return recipeTitles;
     }
 
-    public InlineKeyboardMarkup createRecipeSelectionKeyboard(List<String> recipeTitles, List<Integer> recipeIds, Long  chatId) throws Exception {
+    public InlineKeyboardMarkup createRecipeSelectionKeyboard(List<String> recipeTitles, List<Integer> recipeIds, Long chatId) throws Exception {
         if (recipeTitles.isEmpty() || recipeIds.isEmpty()) {
             return null;
         }
@@ -185,20 +185,21 @@ public class RecipesCommand implements Command {
     }
 
     public EditMessageContainer getRecipeInstructions(Update update, int recipeId) throws Exception {
-        String text;
-
+        String text1 = "", text2 = "", text = "";
         try {
             String response = spoonacularAPI.getRecipeInformation(recipeId);
             String instructions = parseRecipeInstructions(response);
+            String ingredients = parseIngredientsFromResponse(response);
 
-            text = "Step by step instructions for cooking:\n" + instructions;
+            text1 = translateService.translateFromEnglish("Step by step instructions for cooking:", this.chatId) + "\n" + instructions  + "\n\n";
+            text2 = translateService.translateFromEnglish("Ingredients:", chatId) + "\n" + ingredients;
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Error fetching recipe instructions", e);
-            text = "An error occurred while receiving instructions for preparing the recipe. Try again later.";
+            text1 = "An error occurred while receiving instructions for preparing the recipe. Try again later.";
         }
 
         return new EditMessageContainer(update,
-                text,
+                text1 + text2,
                 createEmptyKeyboard(),
                 databaseManager);
     }
@@ -235,6 +236,33 @@ public class RecipesCommand implements Command {
         }
 
         return instructions.toString();
+    }
+
+    private String parseIngredientsFromResponse(String jsonResponse) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode = objectMapper.readTree(jsonResponse);
+        StringBuilder ingredients = new StringBuilder();
+
+        if (rootNode.has("extendedIngredients")) {
+            JsonNode ingredientsNode = rootNode.get("extendedIngredients");
+            if (ingredientsNode.isArray()) {
+                for (JsonNode ingredientNode : ingredientsNode) {
+                    JsonNode nameNode = ingredientNode.get("name");
+                    JsonNode amountNode = ingredientNode.get("amount");
+                    JsonNode unitNode = ingredientNode.get("unit");
+                    if (nameNode != null && amountNode != null && unitNode != null) {
+                        ingredients.append(translateService.translateFromEnglish(nameNode.asText(), this.chatId))
+                                .append(": ")
+                                .append(amountNode.asText())
+                                .append(" ")
+                                .append(translateService.translateFromEnglish(unitNode.asText(), this.chatId))
+                                .append("\n");
+                    }
+                }
+            }
+        }
+
+        return ingredients + translateService.translateFromEnglish("To add products to your shopping list, use the", this.chatId) + " / list.";
     }
 
     private InlineKeyboardMarkup createEmptyKeyboard() {

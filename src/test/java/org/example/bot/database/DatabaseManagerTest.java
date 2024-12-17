@@ -51,10 +51,9 @@ class DatabaseManagerTest {
 
     @Test
     void testAddUser() throws SQLException {
-        String insertUserSQL = "INSERT INTO public.users (user_id, user_name, language, is_vegan, is_vegetarian, has_allergies, allergies, registration_step) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
-                "ON CONFLICT (user_id) DO UPDATE SET user_name = EXCLUDED.user_name, language = EXCLUDED.language, is_vegan = EXCLUDED.is_vegan, is_vegetarian = EXCLUDED.is_vegetarian, has_allergies = EXCLUDED.has_allergies, allergies = EXCLUDED.allergies, registration_step = EXCLUDED.registration_step";
-
+        String insertUserSQL = "INSERT INTO public.users (user_id, user_name, language, is_vegan, is_vegetarian, has_allergies, allergies, registration_step, list_of_products) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+                "ON CONFLICT (user_id) DO UPDATE SET user_name = EXCLUDED.user_name, language = EXCLUDED.language, is_vegan = EXCLUDED.is_vegan, is_vegetarian = EXCLUDED.is_vegetarian, has_allergies = EXCLUDED.has_allergies, allergies = EXCLUDED.allergies, registration_step = EXCLUDED.registration_step, list_of_products = EXCLUDED.list_of_products";
         when(connectionMock.prepareStatement(insertUserSQL)).thenReturn(statementMock);
 
         DatabaseManager databaseManager = new DatabaseManager(connectionMock);
@@ -76,6 +75,7 @@ class DatabaseManagerTest {
         verify(statementMock, times(1)).setBoolean(6, testUser.hasAllergies());
         verify(statementMock, times(1)).setString(7, testUser.getAllergies());
         verify(statementMock, times(1)).setInt(8, testUser.getRegistrationStep());
+        verify(statementMock, times(1)).setString(9, testUser.getList());
         verify(statementMock, times(1)).executeUpdate();
     }
 
@@ -84,7 +84,6 @@ class DatabaseManagerTest {
         when(connectionMock.prepareStatement(anyString())).thenThrow(new SQLException("Database error"));
 
         assertDoesNotThrow(() -> databaseManager.addUser(testUser));
-        // Убедитесь, что ошибка не привела к падению программы
     }
 
     @Test
@@ -141,19 +140,14 @@ class DatabaseManagerTest {
 
     @Test
     void testUpdateLanguage() throws SQLException {
-        // SQL-запрос, который должен быть использован в методе
         String updateLanguageSQL = "UPDATE public.users SET language = ? WHERE user_id = ?";
 
-        // Мокируем поведение connectionMock
         when(connectionMock.prepareStatement(updateLanguageSQL)).thenReturn(statementMock);
 
-        // Создаем экземпляр DatabaseManager с подключением-моком
         DatabaseManager databaseManager = new DatabaseManager(connectionMock);
 
-        // Вызываем метод, который тестируем
         databaseManager.updateLanguage(testUser.getUserId(), "en");
 
-        // Проверяем, что statementMock использовался корректно
         verify(statementMock, times(1)).setString(1, "en"); // Устанавливаем значение для первого параметра
         verify(statementMock, times(1)).setLong(2, testUser.getUserId()); // Устанавливаем значение для второго параметра
         verify(statementMock, times(1)).executeUpdate(); // Выполняем запрос

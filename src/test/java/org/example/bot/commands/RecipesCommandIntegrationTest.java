@@ -83,7 +83,7 @@ public class RecipesCommandIntegrationTest {
         recipesCommand.getContent(update);
 
         SendMessage sendMessage = recipesCommand.getContent(update);
-        assertEquals("Вот несколько рецептов, которые можно приготовить с использованием перечисленных ингредиентов:Рецепт 1Рецепт 2", sendMessage.getText());
+        assertEquals("Вот несколько рецептов, которые можно приготовить с использованием перечисленных ингредиентов: Рецепт 1 Рецепт 2", sendMessage.getText());
     }
 
     @Test
