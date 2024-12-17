@@ -165,7 +165,7 @@ public class RecipesCommand implements Command {
         return recipeTitles;
     }
 
-    public InlineKeyboardMarkup createRecipeSelectionKeyboard(List<String> recipeTitles, List<Integer> recipeIds, Long chatId) throws Exception {
+    public InlineKeyboardMarkup createRecipeSelectionKeyboard(List<String> recipeTitles, List<Integer> recipeIds, Long chatId) {
         if (recipeTitles.isEmpty() || recipeIds.isEmpty()) {
             return null;
         }
@@ -184,8 +184,8 @@ public class RecipesCommand implements Command {
         return inlineKeyboardMarkup;
     }
 
-    public EditMessageContainer getRecipeInstructions(Update update, int recipeId) throws Exception {
-        String text1 = "", text2 = "", text = "";
+    public EditMessageContainer getRecipeInstructions(Update update, int recipeId) {
+        String text1, text2 = "";
         try {
             String response = spoonacularAPI.getRecipeInformation(recipeId);
             String instructions = parseRecipeInstructions(response);

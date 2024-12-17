@@ -23,7 +23,7 @@ class DatabaseManagerTest {
     private User testUser;
 
     @BeforeEach
-    void setUp() throws SQLException {
+    void setUp() {
         connectionMock = Mockito.mock(Connection.class);
         statementMock = Mockito.mock(PreparedStatement.class);
         resultSetMock = Mockito.mock(ResultSet.class);

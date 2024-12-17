@@ -1,5 +1,6 @@
 package org.example.bot.commands;
 
+import org.example.bot.EditMessageContainer;
 import org.example.bot.database.DatabaseManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,8 @@ class ListCommandTest {
     void testGetContent() {
         when(updateMock.getMessage()).thenReturn(messageMock);
         when(messageMock.getChatId()).thenReturn(12345L);
+        long chatId = 12345L;
+        when(databaseManagerMock.getLanguage(chatId)).thenReturn("en");
 
         SendMessage sendMessage = listCommand.getContent(updateMock);
         assertNotNull(sendMessage);
@@ -75,10 +78,12 @@ class ListCommandTest {
         when(updateMock.getCallbackQuery()).thenReturn(callbackQueryMock);
         when(callbackQueryMock.getMessage()).thenReturn(messageMock);
         when(messageMock.getChatId()).thenReturn(12345L);
+        long chatId = 12345L;
+        when(databaseManagerMock.getLanguage(chatId)).thenReturn("en");
 
-        SendMessage sendMessage = listCommand.handleCallback(updateMock, "add_product");
-        assertNotNull(sendMessage);
-        assertEquals("Please enter the product you want to add:", sendMessage.getText());
+        EditMessageContainer container = listCommand.handleCallback(updateMock, "add_product");
+        assertNotNull(container);
+        assertEquals("Please enter the product you want to add:", container.getEditMessageText());
     }
 
     @Test
@@ -90,9 +95,9 @@ class ListCommandTest {
         when(messageMock.getChatId()).thenReturn(12345L);
         when(databaseManagerMock.getListOfProducts(12345L)).thenReturn("milk, eggs, bread");
 
-        SendMessage sendMessage = listCommand.handleCallback(updateMock, "delete_product");
-        assertNotNull(sendMessage);
-        assertEquals("Please enter the products you want to delete (comma-separated):\nmilk, eggs, bread", sendMessage.getText());
+        EditMessageContainer container = listCommand.handleCallback(updateMock, "delete_product");
+        assertNotNull(container);
+        assertEquals("Please enter the products you want to delete (comma-separated):", container.getEditMessageText());
     }
 
     @Test
@@ -101,10 +106,12 @@ class ListCommandTest {
         when(callbackQueryMock.getMessage()).thenReturn(messageMock);
         when(messageMock.getChatId()).thenReturn(12345L);
         when(databaseManagerMock.getListOfProducts(12345L)).thenReturn(null);
+        long chatId = 12345L;
+        when(databaseManagerMock.getLanguage(chatId)).thenReturn("en");
 
-        SendMessage sendMessage = listCommand.handleCallback(updateMock, "delete_product");
-        assertNotNull(sendMessage);
-        assertEquals("No products to delete.", sendMessage.getText());
+        EditMessageContainer container = listCommand.handleCallback(updateMock, "delete_product");
+        assertNotNull(container);
+        assertEquals("No products to delete.", container.getEditMessageText());
     }
 
     @Test
@@ -113,10 +120,12 @@ class ListCommandTest {
         when(callbackQueryMock.getMessage()).thenReturn(messageMock);
         when(messageMock.getChatId()).thenReturn(12345L);
         when(databaseManagerMock.getListOfProducts(12345L)).thenReturn("milk, eggs, bread");
+        long chatId = 12345L;
+        when(databaseManagerMock.getLanguage(chatId)).thenReturn("en");
 
-        SendMessage sendMessage = listCommand.handleCallback(updateMock, "view_list");
-        assertNotNull(sendMessage);
-        assertEquals("Your products: milk, eggs, bread", sendMessage.getText());
+        EditMessageContainer container = listCommand.handleCallback(updateMock, "view_list");
+        assertNotNull(container);
+        assertEquals("Your products: milk, eggs, bread", container.getEditMessageText());
     }
 
     @Test
@@ -125,10 +134,12 @@ class ListCommandTest {
         when(callbackQueryMock.getMessage()).thenReturn(messageMock);
         when(messageMock.getChatId()).thenReturn(12345L);
         when(databaseManagerMock.getListOfProducts(12345L)).thenReturn(null);
+        long chatId = 12345L;
+        when(databaseManagerMock.getLanguage(chatId)).thenReturn("en");
 
-        SendMessage sendMessage = listCommand.handleCallback(updateMock, "view_list");
-        assertNotNull(sendMessage);
-        assertEquals("You don't have any products yet.", sendMessage.getText());
+        EditMessageContainer container = listCommand.handleCallback(updateMock, "view_list");
+        assertNotNull(container);
+        assertEquals("You don't have any products yet.", container.getEditMessageText());
     }
 
     @Test
@@ -136,10 +147,12 @@ class ListCommandTest {
         when(updateMock.getCallbackQuery()).thenReturn(callbackQueryMock);
         when(callbackQueryMock.getMessage()).thenReturn(messageMock);
         when(messageMock.getChatId()).thenReturn(12345L);
+        long chatId = 12345L;
+        when(databaseManagerMock.getLanguage(chatId)).thenReturn("en");
 
-        SendMessage sendMessage = listCommand.handleCallback(updateMock, "invalid_option");
-        assertNotNull(sendMessage);
-        assertEquals("Invalid option.", sendMessage.getText());
+        EditMessageContainer container = listCommand.handleCallback(updateMock, "invalid_option");
+        assertNotNull(container);
+        assertEquals("Invalid option.", container.getEditMessageText());
     }
 
     @Test
@@ -147,6 +160,8 @@ class ListCommandTest {
         when(updateMock.getMessage()).thenReturn(messageMock);
         when(messageMock.getChatId()).thenReturn(12345L);
         listCommand.currentAction = "add";
+        long chatId = 12345L;
+        when(databaseManagerMock.getLanguage(chatId)).thenReturn("en");
 
         SendMessage sendMessage = listCommand.processProductInput(updateMock, "milk");
         assertNotNull(sendMessage);
@@ -161,6 +176,8 @@ class ListCommandTest {
         when(messageMock.getChatId()).thenReturn(12345L);
         listCommand.currentAction = "delete";
         when(databaseManagerMock.deleteProducts(12345L, "milk")).thenReturn(true);
+        long chatId = 12345L;
+        when(databaseManagerMock.getLanguage(chatId)).thenReturn("en");
 
         SendMessage sendMessage = listCommand.processProductInput(updateMock, "milk");
         assertNotNull(sendMessage);
@@ -175,6 +192,8 @@ class ListCommandTest {
         when(messageMock.getChatId()).thenReturn(12345L);
         listCommand.currentAction = "delete";
         when(databaseManagerMock.deleteProducts(12345L, "milk")).thenReturn(false);
+        long chatId = 12345L;
+        when(databaseManagerMock.getLanguage(chatId)).thenReturn("en");
 
         SendMessage sendMessage = listCommand.processProductInput(updateMock, "milk");
         assertNotNull(sendMessage);
@@ -184,10 +203,12 @@ class ListCommandTest {
     }
 
     @Test
-    void    testProcessProductInputInvalidAction() {
+    void testProcessProductInputInvalidAction() {
         when(updateMock.getMessage()).thenReturn(messageMock);
         when(messageMock.getChatId()).thenReturn(12345L);
         listCommand.currentAction = null;
+        long chatId = 12345L;
+        when(databaseManagerMock.getLanguage(chatId)).thenReturn("en");
 
         SendMessage sendMessage = listCommand.processProductInput(updateMock, "milk");
         assertNotNull(sendMessage);
