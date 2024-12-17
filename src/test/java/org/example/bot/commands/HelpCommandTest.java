@@ -15,7 +15,6 @@ import org.mockito.MockedStatic;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
@@ -28,25 +27,19 @@ import static org.mockito.Mockito.*;
 public class HelpCommandTest {
 
     private HelpCommand helpCommand;
-    private LinkedHashMap<String, Command> commandMap;
     private MockedStatic<TelegramBot> mockedStatic;
     private Update update;
     private Message message;
-    private Chat chat;
     private DatabaseManager databaseManager;
     private TranslateService translateService;
-    private OkHttpClient okHttpClient;
-    private Call call;
-    private Response response;
-    private ResponseBody responseBody;
 
     @BeforeEach
     public void setUp() throws IOException {
         databaseManager = mock(DatabaseManager.class);
-        okHttpClient = mock(OkHttpClient.class);
-        call = mock(Call.class);
-        response = mock(Response.class);
-        responseBody = mock(ResponseBody.class);
+        OkHttpClient okHttpClient = mock(OkHttpClient.class);
+        Call call = mock(Call.class);
+        Response response = mock(Response.class);
+        ResponseBody responseBody = mock(ResponseBody.class);
 
         when(okHttpClient.newCall(any())).thenReturn(call);
         when(call.execute()).thenReturn(response);
@@ -55,12 +48,11 @@ public class HelpCommandTest {
 
         translateService = new TranslateService(okHttpClient, databaseManager);
         helpCommand = new HelpCommand(databaseManager); // Инициализация с DatabaseManager
-        commandMap = createCommandMap();
+        LinkedHashMap<String, Command> commandMap = createCommandMap();
         mockedStatic = mockStatic(TelegramBot.class);
         mockedStatic.when(TelegramBot::getCommandMap).thenReturn(commandMap);
         update = mock(Update.class);
         message = mock(Message.class);
-        chat = mock(Chat.class);
     }
 
     @AfterEach
@@ -107,12 +99,14 @@ public class HelpCommandTest {
         doReturn("Select recipes based on your preferences.").when(translateServiceSpy).translateFromEnglish(eq("Select recipes based on your preferences."), eq(chatId));
 
         // Ожидаемый результат
-        String expectedContent = "Доступные команды:\n" +
-                "/info - Информация о функционале бота\n" +
-                "/authors - Авторы\n" +
-                "/register - Регистрация аккаунта в боте\n" +
-                "/recipes - Выберите рецепты в соответствии с вашими предпочтениями.\n" +
-                "/language - Выберите один из предложенных языков:\n";
+        String expectedContent = """
+                Доступные команды:
+                /info - Информация о функционале бота
+                /authors - Авторы
+                /register - Регистрация аккаунта в боте
+                /recipes - Выберите рецепты в соответствии с вашими предпочтениями.
+                /language - Выберите один из предложенных языков:
+                """;
 
         // Вызываем метод и получаем результат
         SendMessage sendMessage = helpCommand.getContent(update);
@@ -124,7 +118,7 @@ public class HelpCommandTest {
 
         // Проверяем наличие клавиатуры
         assertNotNull(sendMessage.getReplyMarkup(), "Клавиатура должна быть установлена");
-        assertTrue(sendMessage.getReplyMarkup() instanceof InlineKeyboardMarkup, "Клавиатура должна быть типа InlineKeyboardMarkup");
+        assertInstanceOf(InlineKeyboardMarkup.class, sendMessage.getReplyMarkup(), "Клавиатура должна быть типа InlineKeyboardMarkup");
     }
 
 

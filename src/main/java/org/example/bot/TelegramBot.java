@@ -114,8 +114,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
 
                 currentCommand = command;
-            } else if (currentCommand instanceof ListCommand) {
-                ListCommand listCommand = (ListCommand) currentCommand;
+            } else if (currentCommand instanceof ListCommand listCommand) {
                 sendMessage = listCommand.processProductInput(update, text);
                 currentCommand = null;
             } else if (currentCommand instanceof RecipesCommand) {
@@ -169,21 +168,20 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
             editMessageText.setText(instructionsMessage.getEditMessageText());
             editMessageText.setReplyMarkup(instructionsMessage.getEditMessageReplyMarkup());
-        } else if (data.startsWith("language:")) {
+        } else if (data.startsWith("language:") || data.equals("/language")) {
             LanguageCommand languageCommand = new LanguageCommand(databaseManager);
-            // Отправляем подтверждение
             EditMessageContainer editMessageContainer = languageCommand.handleCallback(update);
 
             editMessageText.setText(editMessageContainer.getEditMessageText());
             editMarkup.setReplyMarkup(editMessageContainer.getEditMessageReplyMarkup());
-
         } else if (data.equals("/help")) {
             Command helpCommand = commands.get("/help");
             editMessageText.setText(helpCommand.getContent(update).getText());
             editMarkup.setReplyMarkup(((HelpCommand) helpCommand).createInlineCommandsKeyboard());
-        } else if (data.equals("/language")) {
-            LanguageCommand languageCommand = new LanguageCommand(databaseManager);
-            EditMessageContainer editMessageContainer = languageCommand.handleCallback(update);
+        } else if (data.equals("/list")) {
+            currentCommand = commands.get("/list");
+            ListCommand listCommand = new ListCommand(databaseManager);
+            EditMessageContainer editMessageContainer = listCommand.handleCallback(update, data);
 
             editMessageText.setText(editMessageContainer.getEditMessageText());
             editMarkup.setReplyMarkup(editMessageContainer.getEditMessageReplyMarkup());
@@ -196,12 +194,11 @@ public class TelegramBot extends TelegramLongPollingBot {
             editMessageContainer = editProfileCommand.handleCallbackQuery(update.getCallbackQuery(), update, databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId()));
 
             editMessageText.setText(editMessageContainer.getEditMessageText());
-            System.out.println(editMessageContainer.getEditMessageReplyMarkup());
             editMarkup.setReplyMarkup(editMessageContainer.getEditMessageReplyMarkup());
         } else if (data.startsWith("add_product") || data.startsWith("delete_product") || data.startsWith("view_list")) {
             ListCommand listCommand = (ListCommand) commands.get("/list");
-            SendMessage sendMessage = listCommand.handleCallback(update, data);
-            editMessageText.setText(sendMessage.getText());
+            EditMessageContainer editMessageContainer = listCommand.handleCallback(update, data);
+            editMessageText.setText(editMessageContainer.getEditMessageText());
         } else {
             Command command = commands.get(data);
             if (command != null) {

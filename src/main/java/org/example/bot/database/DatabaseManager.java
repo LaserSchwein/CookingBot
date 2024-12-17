@@ -322,7 +322,7 @@ public class DatabaseManager {
                 }
             }
             if (shouldKeep) {
-                if (updatedProducts.length() > 0) {
+                if (!updatedProducts.isEmpty()) {
                     updatedProducts.append(", ");
                 }
                 updatedProducts.append(p);
