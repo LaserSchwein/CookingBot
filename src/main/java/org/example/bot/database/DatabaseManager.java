@@ -21,7 +21,7 @@ public class DatabaseManager {
     private static final Logger logger = Logger.getLogger(DatabaseManager.class.getName());
 
     public DatabaseManager() {
-        System.out.println("База данных успешно подключена!");
+        System.out.println("Database connected successfully!");
         loadConfig();
         connectToDatabase();
     }
@@ -57,9 +57,9 @@ public class DatabaseManager {
     }
 
     public void addUser(User user) {
-        String insertUserSQL = "INSERT INTO public.users (user_id, user_name, language, is_vegan, is_vegetarian, has_allergies, allergies, registration_step) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
-                "ON CONFLICT (user_id) DO UPDATE SET user_name = EXCLUDED.user_name, language = EXCLUDED.language, is_vegan = EXCLUDED.is_vegan, is_vegetarian = EXCLUDED.is_vegetarian, has_allergies = EXCLUDED.has_allergies, allergies = EXCLUDED.allergies, registration_step = EXCLUDED.registration_step";
+        String insertUserSQL = "INSERT INTO public.users (user_id, user_name, language, is_vegan, is_vegetarian, has_allergies, allergies, registration_step, list_of_products) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+                "ON CONFLICT (user_id) DO UPDATE SET user_name = EXCLUDED.user_name, language = EXCLUDED.language, is_vegan = EXCLUDED.is_vegan, is_vegetarian = EXCLUDED.is_vegetarian, has_allergies = EXCLUDED.has_allergies, allergies = EXCLUDED.allergies, registration_step = EXCLUDED.registration_step, list_of_products = EXCLUDED.list_of_products";
         try (PreparedStatement statement = connection.prepareStatement(insertUserSQL)) {
             statement.setLong(1, user.getUserId());
             statement.setString(2, user.getUserName());
@@ -69,6 +69,7 @@ public class DatabaseManager {
             statement.setBoolean(6, user.hasAllergies());
             statement.setString(7, user.getAllergies());
             statement.setInt(8, user.getRegistrationStep());
+            statement.setString(9, user.getList());
             statement.executeUpdate();
             logger.info("User added/updated successfully: " + user.getUserId());
         } catch (SQLException e) {
@@ -254,5 +255,100 @@ public class DatabaseManager {
             logger.log(Level.SEVERE, "Error retrieving language for user: " + userId, e);
         }
         return "";
+    }
+
+    public void updateListOfProducts(long userId, String products) {
+        String updateProductsSQL = "UPDATE public.users SET list_of_products = ? WHERE user_id = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(updateProductsSQL)) {
+            statement.setString(1, products);
+            statement.setLong(2, userId);
+            statement.executeUpdate();
+            logger.info("Updated list of products for user: " + userId + " - Products: " + products);
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error updating list of products for user: " + userId, e);
+        }
+    }
+
+    public String getListOfProducts(long userId) {
+        String selectProductsSQL = "SELECT list_of_products FROM public.users WHERE user_id = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(selectProductsSQL)) {
+            statement.setLong(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                String products = resultSet.getString("list_of_products");
+                logger.info("Retrieved list of products for user: " + userId + " - Products: " + products);
+                return products;
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error retrieving list of products for user: " + userId, e);
+        }
+        return null;
+    }
+
+    public void addProduct(long userId, String product) {
+        logger.info("Adding product: " + product + " for user: " + userId);
+        String currentProducts = getListOfProducts(userId);
+        logger.info("Current products: " + currentProducts);
+        if (currentProducts == null) {
+            currentProducts = "";
+        }
+        String updatedProducts = currentProducts.isEmpty() ? product : currentProducts + ", " + product;
+        updateListOfProducts(userId, updatedProducts);
+        logger.info("Product added successfully for user: " + userId);
+    }
+
+    public boolean deleteProducts(long userId, String productsToDelete) {
+        logger.info("Deleting products: " + productsToDelete + " for user: " + userId);
+        String currentProducts = getListOfProducts(userId);
+        logger.info("Current products: " + currentProducts);
+        if (currentProducts == null) {
+            currentProducts = "";
+        }
+
+        String[] productsArray = currentProducts.split(", ");
+        String[] productsToDeleteArray = productsToDelete.split(", ");
+        StringBuilder updatedProducts = new StringBuilder();
+        boolean productFound = false;
+
+        for (String p : productsArray) {
+            boolean shouldKeep = true;
+            for (String productToDelete : productsToDeleteArray) {
+                if (p.equals(productToDelete.trim())) {
+                    shouldKeep = false;
+                    productFound = true;
+                    break;
+                }
+            }
+            if (shouldKeep) {
+                if (updatedProducts.length() > 0) {
+                    updatedProducts.append(", ");
+                }
+                updatedProducts.append(p);
+            }
+        }
+
+        if (!productFound) {
+            logger.info("Product not found for deletion: " + productsToDelete);
+            return false;
+        }
+
+        updateListOfProducts(userId, updatedProducts.toString());
+        logger.info("Products deleted successfully for user: " + userId);
+        return true;
+    }
+
+    public boolean userExists(long userId) {
+        String selectUserSQL = "SELECT 1 FROM public.users WHERE user_id = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(selectUserSQL)) {
+            statement.setLong(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error checking if user exists: " + userId, e);
+        }
+        return false;
     }
 }

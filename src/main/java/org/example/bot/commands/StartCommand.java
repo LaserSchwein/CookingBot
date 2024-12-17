@@ -1,11 +1,7 @@
 package org.example.bot.commands;
 
-import okhttp3.OkHttpClient;
-import org.example.bot.api.TranslateService;
-import org.example.bot.database.DatabaseManager;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
 public class StartCommand implements Command {
 

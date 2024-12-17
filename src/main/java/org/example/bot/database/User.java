@@ -9,6 +9,7 @@ public class User {
     private boolean hasAllergies;
     private String allergies;
     private int registrationStep;
+    private String list;
 
     // Конструктор
     public User(long userId, String userName) {
@@ -26,6 +27,10 @@ public class User {
 
     public String getLanguage() {
         return language;
+    }
+
+    public String getList() {
+        return list;
     }
 
     public void setLanguage(String language) {

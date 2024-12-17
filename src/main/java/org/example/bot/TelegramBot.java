@@ -3,8 +3,8 @@ package org.example.bot;
 import okhttp3.OkHttpClient;
 import org.example.bot.api.TranslateService;
 import org.example.bot.commands.*;
-import org.example.bot.database.DatabaseManager;
 import org.example.bot.api.SpoonacularAPI;
+import org.example.bot.database.DatabaseManager;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -43,6 +43,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         commands.put("/register", new RegisterCommand(databaseManager));
         commands.put("/recipes", new RecipesCommand(spoonacularAPI, databaseManager));
         commands.put("/language", new LanguageCommand(databaseManager));
+        commands.put("/list", new ListCommand(databaseManager));
+        commands.put("/editprofile", new EditProfileCommand(databaseManager));
     }
 
     public static LinkedHashMap<String, Command> getCommandMap() {
@@ -86,10 +88,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-
         if (update.hasMessage() && update.getMessage().hasText()) {
             String text = update.getMessage().getText();
-
             SendMessage sendMessage = new SendMessage();
             sendMessage.setChatId(update.getMessage().getChatId().toString());
 
@@ -114,15 +114,24 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
 
                 currentCommand = command;
+            } else if (currentCommand instanceof ListCommand) {
+                ListCommand listCommand = (ListCommand) currentCommand;
+                sendMessage = listCommand.processProductInput(update, text);
+                currentCommand = null;
             } else if (currentCommand instanceof RecipesCommand) {
                 sendMessage = currentCommand.getContent(update);
                 currentCommand = null;
             } else if (databaseManager.getRegistrationStep(update.getMessage().getChatId()) == 4) {
                 RegisterCommand registerCommand = (RegisterCommand) commands.get("/register");
-
                 EditMessageContainer editMessageContainer = registerCommand.registration(update);
                 sendMessage.setText(editMessageContainer.getEditMessageText());
-            } else {
+            } else if (databaseManager.getRegistrationStep(update.getMessage().getChatId()) == 7) {
+                EditProfileCommand editProfileCommand = (EditProfileCommand) commands.get("/editprofile");
+
+                EditMessageContainer editMessageContainer = editProfileCommand.handleCallbackQuery(new CallbackQuery() ,update, 7);
+                sendMessage.setText(editMessageContainer.getEditMessageText());
+            }
+            else {
                 sendMessage.setText(translateService.translateFromEnglish("Sorry, I don't understand this command. Type /help for a list of commands.", update.getMessage().getChatId()));
                 sendMessage.setReplyMarkup(((HelpCommand) commands.get("/help")).getReplyKeyboard());
             }
@@ -134,12 +143,12 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
         } else if (update.hasCallbackQuery()) {
             handleCallbackQuery(update.getCallbackQuery(), update);
-
         }
     }
 
     private void handleCallbackQuery(CallbackQuery callbackQuery, Update update) {
         String data = callbackQuery.getData();
+        logger.info("Callback data received: " + data);
 
         EditMessageText editMessageText = new EditMessageText();
         editMessageText.setChatId(callbackQuery.getMessage().getChatId().toString());
@@ -152,7 +161,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (data.startsWith("recipe_")) {
             int recipeId = Integer.parseInt(data.split("_")[1]);
             RecipesCommand recipesCommand = (RecipesCommand) commands.get("/recipes");
-            EditMessageContainer instructionsMessage = null;
+            EditMessageContainer instructionsMessage;
             try {
                 instructionsMessage = recipesCommand.getRecipeInstructions(update, recipeId);
             } catch (Exception e) {
@@ -160,30 +169,45 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
             editMessageText.setText(instructionsMessage.getEditMessageText());
             editMessageText.setReplyMarkup(instructionsMessage.getEditMessageReplyMarkup());
-
         } else if (data.startsWith("language:")) {
-            LanguageCommand callback = new LanguageCommand(databaseManager);
+            LanguageCommand languageCommand = new LanguageCommand(databaseManager);
             // Отправляем подтверждение
-            try {
-                this.execute(callback.handleCallback(update));
+            EditMessageContainer editMessageContainer = languageCommand.handleCallback(update);
 
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
+            editMessageText.setText(editMessageContainer.getEditMessageText());
+            editMarkup.setReplyMarkup(editMessageContainer.getEditMessageReplyMarkup());
+
         } else if (data.equals("/help")) {
             Command helpCommand = commands.get("/help");
-
             editMessageText.setText(helpCommand.getContent(update).getText());
             editMarkup.setReplyMarkup(((HelpCommand) helpCommand).createInlineCommandsKeyboard());
+        } else if (data.equals("/language")) {
+            LanguageCommand languageCommand = new LanguageCommand(databaseManager);
+            EditMessageContainer editMessageContainer = languageCommand.handleCallback(update);
+
+            editMessageText.setText(editMessageContainer.getEditMessageText());
+            editMarkup.setReplyMarkup(editMessageContainer.getEditMessageReplyMarkup());
+        } else if (data.startsWith("edit") || data.equals("/editprofile")) {
+            EditProfileCommand editProfileCommand = new EditProfileCommand(databaseManager);
+            EditMessageContainer editMessageContainer;
+            if (data.equals("/editprofile")) {
+                databaseManager.updateRegistrationStep(update.getCallbackQuery().getMessage().getChatId(), 0);
+            }
+            editMessageContainer = editProfileCommand.handleCallbackQuery(update.getCallbackQuery(), update, databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId()));
+
+            editMessageText.setText(editMessageContainer.getEditMessageText());
+            System.out.println(editMessageContainer.getEditMessageReplyMarkup());
+            editMarkup.setReplyMarkup(editMessageContainer.getEditMessageReplyMarkup());
+        } else if (data.startsWith("add_product") || data.startsWith("delete_product") || data.startsWith("view_list")) {
+            ListCommand listCommand = (ListCommand) commands.get("/list");
+            SendMessage sendMessage = listCommand.handleCallback(update, data);
+            editMessageText.setText(sendMessage.getText());
         } else {
             Command command = commands.get(data);
-
             if (command != null) {
                 currentCommand = command;
-
                 if (command instanceof RegisterCommand) {
                     int step = databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId());
-
                     if (step == 3 || step == 5) {
                         editMessageText.setText(translateService.translateFromEnglish("You have already registered", update.getCallbackQuery().getMessage().getChatId()));
                     } else {
@@ -192,12 +216,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                 } else {
                     editMessageText.setText(command.getContent(update).getText());
                 }
-
                 if (command instanceof HelpCommand) {
                     editMarkup.setReplyMarkup(((HelpCommand) command).createInlineCommandsKeyboard());
                 } else if (command instanceof RegisterCommand) {
                     int step = databaseManager.getRegistrationStep(update.getCallbackQuery().getMessage().getChatId());
-
                     if (step == 3 || step == 5) {
                         editMarkup.setReplyMarkup(command.createHelpBackButtonKeyboard());
                     } else {
@@ -206,20 +228,25 @@ public class TelegramBot extends TelegramLongPollingBot {
                 } else {
                     editMarkup.setReplyMarkup(command.createHelpBackButtonKeyboard());
                 }
-
             } else if (data.equals("back") || data.startsWith("vegan_") || data.startsWith("vegetarian_") || data.startsWith("allergies_")) {
                 RegisterCommand registerCommand = (RegisterCommand) commands.get("/register");
                 EditMessageContainer editMessageContainer = registerCommand.registration(update);
-
                 editMessageText.setText(editMessageContainer.getEditMessageText());
                 editMarkup.setReplyMarkup(editMessageContainer.getEditMessageReplyMarkup());
             }
         }
         try {
             this.execute(editMessageText);
-            this.execute(editMarkup);
         } catch (TelegramApiException e) {
-            logger.log(Level.SEVERE, "Error executing editMessageText or editMarkup", e);
+            logger.log(Level.SEVERE, "Error executing editMessageText", e);
+        }
+
+        if (editMarkup.getReplyMarkup() != null && !editMarkup.getReplyMarkup().getKeyboard().isEmpty()) {
+            try {
+                this.execute(editMarkup);
+            } catch (TelegramApiException e) {
+                logger.log(Level.SEVERE, "Error executing editMessageText", e);
+            }
         }
     }
 }
