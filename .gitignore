@@ -40,5 +40,4 @@ build/
 ### Properties ###
 src/main/resources/bottoken.properties
 src/main/resources/dbconfig.properties
-
-.idea
+.idea/
